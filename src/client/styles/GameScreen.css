@@ -1,0 +1,212 @@
+/* ================================
+   IDLE POST RPG — GAME + UPGRADES
+   ================================ */
+
+:root {
+  --radius: 0.75rem;
+  --transition: 0.25s ease;
+}
+
+/* === Base Layout === */
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 2rem 1rem;
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.container {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+  padding-inline: 16px;
+}
+
+/* === Titles === */
+h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+
+h2 {
+  font-size: 1.3rem;
+  margin-top: 1.5rem;
+}
+
+/* === Stats === */
+.stats {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* === Buttons === */
+button {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.7rem 1.25rem;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-weight: 600;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.actions,
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.main {
+  font-size: 1.15rem;
+}
+
+/* === Upgrade Grid === */
+.upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 1rem;
+  width: 100%;
+  margin: 1.5rem auto;
+}
+
+.upgrade-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: left;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s, background 0.3s, border 0.3s;
+}
+
+.upgrade-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0.5rem var(--accent);
+}
+
+.upgrade-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.4rem;
+}
+
+.upgrade-card p {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-bottom: 0.6rem;
+}
+
+.upgrade-card button {
+  width: 100%;
+  text-align: center;
+}
+
+/* === Back Button === */
+.back-button {
+  margin-top: 2rem;
+  background: var(--accent);
+  color: #fff;
+}
+
+/* === RESPONSIVENESS === */
+@media (max-width: 600px) {
+  h1 { font-size: 1.8rem; }
+  .upgrade-grid { grid-template-columns: 1fr; }
+  button { width: 100%; }
+}
+
+/* ===============================
+   THEMES — Reddit Inspired
+   =============================== */
+
+/* === MODERN LIGHT === */
+[data-theme='light'] {
+  --bg: #dae0e6;
+  --text: #1a1a1b;
+  --accent: #0079d3;
+  --card-bg: #ffffff;
+  --border: #ccc;
+  --shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='light'] .screen {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+[data-theme='light'] button {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* === MODERN DARK === */
+[data-theme='dark'] {
+  --bg: #0b1416;
+  --text: #d7dadc;
+  --accent: #4fbcff;
+  --card-bg: #1a1a1b;
+  --border: #272729;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='dark'] .screen {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+[data-theme='dark'] button {
+  background: var(--accent);
+  color: #0b1416;
+}
+
+/* === OLD SCHOOL === */
+[data-theme='oldschool'] {
+  --bg: #f6f7f8;
+  --text: #000;
+  --accent: #ff4500;
+  --card-bg: #ffffff;
+  --border: #bfbfbf;
+  --shadow: none;
+}
+
+[data-theme='oldschool'] .screen {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: Verdana, Arial, sans-serif;
+}
+
+[data-theme='oldschool'] button {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 0;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+[data-theme='oldschool'] .upgrade-card {
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
