@@ -24,7 +24,7 @@ export default function App() {
     case 'settings':
       return <Settings goTo={setScreen} />;
     case 'upgrades':
-      return <Upgrades goTo={setScreen} />; // ✅ new screen
+      return <Upgrades goTo={setScreen} />;
     default:
       return <StartScreen goTo={setScreen} />;
   }
