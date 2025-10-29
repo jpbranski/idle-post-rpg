@@ -1,7 +1,8 @@
 // src/server/index.ts
 
-import { Devvit } from '@devvit/public-api';
+import { Devvit, Context } from '@devvit/public-api';
 import { reddit } from '@devvit/web/server';
+import type { GameState } from '../shared/types/game';
 
 Devvit.configure({
   redditAPI: true,
@@ -38,115 +39,192 @@ Devvit.addMenuItem({
   },
 });
 
-// === SAVE GAME STATE ===
-Devvit.addSchedulerJob({
-  name: 'save_game_state',
-  onRun: async (event, context) => {
-    const data = event.data as { userId: string; gameState: any; username?: string };
-    const { userId, gameState, username } = data;
+// === CUSTOM POST WITH MESSAGE HANDLER ===
+Devvit.addCustomPostType({
+  name: 'idle-post-rpg',
+  height: 'tall',
+  onAction: async (action, _data, context) => {
+    const { action: actionType, payload, id } = _data;
 
     try {
-      // Save player data
-      await context.redis.set(`player:${userId}:save`, JSON.stringify(gameState));
+      let result: any;
 
-      // Update leaderboard if not anonymous
-      if (!gameState.settings.anonymous && gameState.score > 0) {
-        await context.redis.zAdd('leaderboard:global', {
-          member: userId,
-          score: gameState.score,
-        });
+      switch (actionType) {
+        case 'save_game':
+          result = await handleSaveGame(payload, context);
+          break;
 
-        // Store username for display
-        await context.redis.hSet(`player:${userId}:info`, {
-          username: username || 'Player',
-          score: gameState.score.toString(),
-        });
-      } else if (gameState.settings.anonymous) {
-        // Remove from leaderboard if anonymous
-        await context.redis.zRem('leaderboard:global', [userId]);
+        case 'load_game':
+          result = await handleLoadGame(payload, context);
+          break;
+
+        case 'get_leaderboard':
+          result = await handleGetLeaderboard(payload, context);
+          break;
+
+        case 'get_rank':
+          result = await handleGetRank(payload, context);
+          break;
+
+        default:
+          throw new Error(`Unknown action: ${actionType}`);
       }
 
-      console.log('Game state saved successfully for user:', userId);
-    } catch (error) {
-      console.error('Save game state error:', error);
+      // Send success response
+      context.ui.webView.postMessage('devvit-response', {
+        id,
+        data: result,
+      });
+    } catch (error: any) {
+      console.error(`Error handling ${actionType}:`, error);
+
+      // Send error response
+      context.ui.webView.postMessage('devvit-response', {
+        id,
+        error: error.message || 'Unknown error',
+      });
     }
+  },
+  render: () => {
+    return null;
   },
 });
 
-// === LOAD GAME STATE ===
-Devvit.addSchedulerJob({
-  name: 'load_game_state',
-  onRun: async (event, context) => {
-    const { userId } = event.data as { userId: string };
+// === HANDLER FUNCTIONS ===
 
-    try {
-      const data = await context.redis.get(`player:${userId}:save`);
-      console.log('Game state loaded for user:', userId, data ? 'found' : 'not found');
-    } catch (error) {
-      console.error('Load game state error:', error);
+async function handleSaveGame(
+  payload: { gameState: GameState },
+  context: Context
+): Promise<void> {
+  const { gameState } = payload;
+  const userId = context.userId!;
+  
+  // Get username safely
+  let username = 'Player';
+  try {
+    // Convert userId to t2_${string} format if needed
+    const fullUserId = userId.startsWith('t2_') ? (userId as `t2_${string}`) : (`t2_${userId}` as `t2_${string}`);
+    const user = await reddit.getUserById(fullUserId);
+    username = user?.username || 'Player';
+  } catch (err) {
+    console.warn('Could not fetch username, using default');
+  }
+
+  // Save player data with expiration
+  await context.redis.set(
+    `player:${userId}:save`,
+    JSON.stringify(gameState)
+  );
+
+  // Update leaderboard if not anonymous
+  if (!gameState.settings.anonymous && gameState.score > 0) {
+    await context.redis.zAdd('leaderboard:global', {
+      member: userId,
+      score: gameState.score,
+    });
+
+    // Store username for display
+    await context.redis.hSet(`player:${userId}:info`, {
+      username,
+      score: gameState.score.toString(),
+      lastUpdated: Date.now().toString(),
+    });
+  } else if (gameState.settings.anonymous) {
+    // Remove from leaderboard if anonymous
+    await context.redis.zRem('leaderboard:global', [userId]);
+  }
+
+  console.log(`Game state saved for user ${userId}`);
+}
+
+async function handleLoadGame(
+  _payload: any,
+  context: Context
+): Promise<GameState | null> {
+  const userId = context.userId;
+
+  if (!userId) {
+    return null;
+  }
+
+  try {
+    const data = await context.redis.get(`player:${userId}:save`);
+    if (data) {
+      return JSON.parse(data);
     }
-  },
-});
+  } catch (error) {
+    console.error('Error loading game:', error);
+  }
 
-// === GET LEADERBOARD ===
-Devvit.addSchedulerJob({
-  name: 'get_leaderboard',
-  onRun: async (event, context) => {
-    const { limit = 25 } = event.data as any;
+  return null;
+}
 
-    try {
-      // Get top scores (highest first)
-      const entries = await context.redis.zRange('leaderboard:global', -limit, -1);
+async function handleGetLeaderboard(
+  payload: { limit: number },
+  context: Context
+): Promise<any[]> {
+  const { limit = 25 } = payload;
 
-      // Reverse to get highest scores first
-      const topPlayers = entries.reverse();
+  try {
+    // Get top scores (highest first, descending)
+    const entries = await context.redis.zRange('leaderboard:global', 0, limit - 1, {
+      reverse: true,
+    } as any); // Cast to any to handle version differences
 
-      // Fetch usernames for each player
-      const leaderboard = await Promise.all(
-        topPlayers.map(async (entry, index) => {
+    // Fetch usernames for each player
+    const leaderboard = await Promise.all(
+      entries.map(async (entry: any, index: number) => {
+        try {
           const info = await context.redis.hGetAll(`player:${entry.member}:info`);
           return {
             userId: entry.member,
-            username: info.username || 'Anonymous',
+            username: (info?.username as string) || 'Anonymous',
             score: entry.score,
             rank: index + 1,
           };
-        })
-      );
+        } catch (err) {
+          console.error(`Error fetching leaderboard entry for ${entry.member}:`, err);
+          return {
+            userId: entry.member,
+            username: 'Anonymous',
+            score: entry.score,
+            rank: index + 1,
+          };
+        }
+      })
+    );
 
-      console.log('Leaderboard fetched:', leaderboard.length, 'entries');
-    } catch (error) {
-      console.error('Get leaderboard error:', error);
+    return leaderboard;
+  } catch (error) {
+    console.error('Get leaderboard error:', error);
+    return [];
+  }
+}
+
+async function handleGetRank(
+  _payload: any,
+  context: Context
+): Promise<{ rank: number | null }> {
+  const userId = context.userId;
+
+  if (!userId) {
+    return { rank: null };
+  }
+
+  try {
+    // Get user's rank (0-indexed, from highest)
+    const rank = await context.redis.zRank('leaderboard:global', userId);
+
+    if (rank === undefined || rank === null) {
+      return { rank: null };
     }
-  },
-});
 
-// === GET USER RANK ===
-Devvit.addSchedulerJob({
-  name: 'get_user_rank',
-  onRun: async (event, context) => {
-    const { userId } = event.data as { userId: string };
-
-    try {
-      // Get total count
-      const totalPlayers = await context.redis.zCard('leaderboard:global');
-
-      // Get user's rank (0-indexed)
-      const rank = await context.redis.zRank('leaderboard:global', userId);
-
-      if (rank === undefined) {
-        console.log('User not found in leaderboard:', userId);
-        return;
-      }
-
-      // Convert to 1-indexed rank (counting from top)
-      const actualRank = totalPlayers - rank;
-
-      console.log('User rank:', userId, actualRank);
-    } catch (error) {
-      console.error('Get user rank error:', error);
-    }
-  },
-});
+    // Convert to 1-indexed rank
+    return { rank: rank + 1 };
+  } catch (error) {
+    console.error('Get user rank error:', error);
+    return { rank: null };
+  }
+}
 
 export default Devvit;

@@ -50,13 +50,13 @@ function sendToDevvit(action: string, payload: any): Promise<any> {
       '*'
     );
 
-    // Timeout after 10 seconds
+    // Timeout after 15 seconds
     setTimeout(() => {
       if (pendingRequests.has(id)) {
         pendingRequests.delete(id);
-        reject(new Error('Request timeout'));
+        reject(new Error('Request timeout (15s)'));
       }
-    }, 10000);
+    }, 15000);
   });
 }
 

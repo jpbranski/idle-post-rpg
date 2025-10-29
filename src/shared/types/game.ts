@@ -133,6 +133,7 @@ export const DEFAULT_STATE: GameState = {
   activeEffects: [],
   achievements: [],
   achievementsViewed: false,
+  lastViewedAchievementCount: 0,
   stats: {
     totalClicks: 0,
     totalKarmaEarned: 0,
