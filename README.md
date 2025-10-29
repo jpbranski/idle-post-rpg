@@ -16,11 +16,11 @@ Idle Post RPG is an engaging incremental game where you farm Reddit karma throug
 
 - **🖱️ Active Clicking**: Click "Reply" to earn karma with upgrades up to 10 levels
 - **⚡ Passive Income**: Unlock Comments, Posts, and Shitposts for automatic karma generation
-- **🎯 Strategic Upgrades**: 
+- **🎯 Strategic Upgrades**:
   - Gaming PC (0-5): +20% global karma per level
   - Gaming Chair (0-5): +0.5% award chance per level
   - Popular & Influencer: Infinitely scaling multipliers
-- **🏆 Competitive Play**: 
+- **🏆 Competitive Play**:
   - Global leaderboards showing top 25 players
   - Anonymous mode for privacy
   - Real-time rank tracking
@@ -156,10 +156,10 @@ Awards are earned **only from clicking**, not passive income:
 
 Events occur every 10-15 minutes:
 
-| Event | Effect | Duration |
-|-------|--------|----------|
-| 🔥 Trending | 2× karma multiplier | 20 seconds |
-| 🚫 Banned | 50% karma penalty | 30 seconds |
+| Event          | Effect               | Duration      |
+| -------------- | -------------------- | ------------- |
+| 🔥 Trending    | 2× karma multiplier  | 20 seconds    |
+| 🚫 Banned      | 50% karma penalty    | 30 seconds    |
 | ⚠️ Spam Filter | Disables one passive | 45-60 seconds |
 
 ### Prestige
@@ -175,15 +175,15 @@ Events occur every 10-15 minutes:
 
 Unlock beautiful themes with awards:
 
-| Theme | Cost | Description |
-|-------|------|-------------|
-| ☀️ Light | Free | Default Reddit light mode |
-| 🌙 Dark | 1 award | Modern dark Reddit theme |
-| 📰 Old School | 5 awards | Classic Reddit aesthetic |
-| 💻 Terminal | 5 awards | Hacker green-on-black |
-| 🌸 Cherry Blossom | 10 awards | Serene pink theme |
-| 🖥️ Windows 98 | 10 awards | Nostalgic retro theme |
-| ✨ Gold | 100 awards | Luxurious golden theme |
+| Theme             | Cost       | Description               |
+| ----------------- | ---------- | ------------------------- |
+| ☀️ Light          | Free       | Default Reddit light mode |
+| 🌙 Dark           | 1 award    | Modern dark Reddit theme  |
+| 📰 Old School     | 5 awards   | Classic Reddit aesthetic  |
+| 💻 Terminal       | 5 awards   | Hacker green-on-black     |
+| 🌸 Cherry Blossom | 10 awards  | Serene pink theme         |
+| 🖥️ Windows 98     | 10 awards  | Nostalgic retro theme     |
+| ✨ Gold           | 100 awards | Luxurious golden theme    |
 
 ---
 
@@ -192,22 +192,26 @@ Unlock beautiful themes with awards:
 Complete challenges to unlock achievements (cosmetic):
 
 **Click Milestones**
+
 - Getting Started (100 clicks)
 - Dedicated (1,000 clicks)
 - Obsessed (10,000 clicks)
 
 **Score Milestones**
+
 - First Thousand (1k karma)
 - Ten Grand (10k karma)
 - Six Figures (100k karma)
 - Millionaire (1M karma)
 
 **Upgrade Milestones**
+
 - Reply Expert (max out Reply)
 - Tech God (max out PC)
 - Comfortable (max out Chair)
 
 **Hidden Achievements**
+
 - Troublemaker (get banned)
 - Spam Filter Victim (get flagged)
 
@@ -216,6 +220,7 @@ Complete challenges to unlock achievements (cosmetic):
 ## 🎯 Roadmap
 
 ### Version 1.1 (Planned)
+
 - [ ] Daily challenges
 - [ ] More themes (community suggestions)
 - [ ] Sound effects toggle
@@ -223,6 +228,7 @@ Complete challenges to unlock achievements (cosmetic):
 - [ ] More random events
 
 ### Version 2.0 (Future)
+
 - [ ] Guilds/Teams
 - [ ] Seasonal events
 - [ ] Weekly competitions
@@ -261,6 +267,7 @@ This is a closed-source project, but feedback is welcome!
 ## 🙏 Acknowledgments
 
 Built with:
+
 - [Reddit Devvit Platform](https://developers.reddit.com/)
 - [React](https://react.dev/)
 - [Vite](https://vite.dev/)

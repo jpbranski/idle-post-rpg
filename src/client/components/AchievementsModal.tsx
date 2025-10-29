@@ -9,17 +9,25 @@ interface Props {
 }
 
 export default function AchievementsModal({ state, onClose }: Props) {
-  const unlockedAchievements = ACHIEVEMENTS.filter(a => state.achievements.includes(a.id));
-  const lockedAchievements = ACHIEVEMENTS.filter(a => !state.achievements.includes(a.id) && !a.hidden);
-  const progress = (unlockedAchievements.length / ACHIEVEMENTS.filter(a => !a.hidden).length * 100).toFixed(0);
+  const unlockedAchievements = ACHIEVEMENTS.filter((a) => state.achievements.includes(a.id));
+  const lockedAchievements = ACHIEVEMENTS.filter(
+    (a) => !state.achievements.includes(a.id) && !a.hidden
+  );
+  const progress = (
+    (unlockedAchievements.length / ACHIEVEMENTS.filter((a) => !a.hidden).length) *
+    100
+  ).toFixed(0);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content achievements-modal" onClick={e => e.stopPropagation()}>
-        <button className="close-btn" onClick={onClose}>✕</button>
+      <div className="modal-content achievements-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="close-btn" onClick={onClose}>
+          ✕
+        </button>
         <h2>Achievements</h2>
         <p className="progress-text">
-          {unlockedAchievements.length} / {ACHIEVEMENTS.filter(a => !a.hidden).length} Unlocked ({progress}%)
+          {unlockedAchievements.length} / {ACHIEVEMENTS.filter((a) => !a.hidden).length} Unlocked (
+          {progress}%)
         </p>
         <div className="progress-bar">
           <div className="progress-fill" style={{ width: `${progress}%` }} />
@@ -30,7 +38,7 @@ export default function AchievementsModal({ state, onClose }: Props) {
           <section className="achievement-section">
             <h3>✅ Unlocked</h3>
             <div className="achievement-grid">
-              {unlockedAchievements.map(achievement => (
+              {unlockedAchievements.map((achievement) => (
                 <div key={achievement.id} className="achievement-card unlocked">
                   <div className="achievement-icon">🏆</div>
                   <div className="achievement-info">
@@ -48,7 +56,7 @@ export default function AchievementsModal({ state, onClose }: Props) {
           <section className="achievement-section">
             <h3>🔒 Locked</h3>
             <div className="achievement-grid">
-              {lockedAchievements.map(achievement => (
+              {lockedAchievements.map((achievement) => (
                 <div key={achievement.id} className="achievement-card locked">
                   <div className="achievement-icon">❓</div>
                   <div className="achievement-info">

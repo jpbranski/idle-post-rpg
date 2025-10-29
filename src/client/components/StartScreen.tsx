@@ -6,7 +6,7 @@ import { calculateOfflineProgress } from '../../shared/helpers/calculations';
 
 export default function StartScreen({ goTo }: { goTo: (s: Screen) => void }) {
   const { state } = useGameState();
-  
+
   // Calculate offline gains
   const offlineKarma = calculateOfflineProgress(state);
   const hasProgress = state.score > 0;
@@ -22,7 +22,9 @@ export default function StartScreen({ goTo }: { goTo: (s: Screen) => void }) {
       {offlineKarma > 0 && (
         <div className="offline-gains">
           <h3>Welcome Back!</h3>
-          <p>You earned <strong>{offlineKarma.toLocaleString()}</strong> karma while you were away</p>
+          <p>
+            You earned <strong>{offlineKarma.toLocaleString()}</strong> karma while you were away
+          </p>
         </div>
       )}
 

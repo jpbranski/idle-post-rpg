@@ -31,7 +31,7 @@ export default function Leaderboard({ goTo }: { goTo: (s: Screen) => void }) {
       const userEntry: LeaderboardEntry = {
         username: 'You',
         score: state.score,
-        rank: mockLeaderboard.filter(e => e.score > state.score).length + 1,
+        rank: mockLeaderboard.filter((e) => e.score > state.score).length + 1,
         isCurrentUser: true,
       };
       setCurrentUserRank(userEntry.rank);
@@ -54,7 +54,9 @@ export default function Leaderboard({ goTo }: { goTo: (s: Screen) => void }) {
     <div className="screen leaderboard-screen">
       <div className="header">
         <h2>🏆 Leaderboard</h2>
-        <button className="back-btn" onClick={() => goTo('game')}>← Back</button>
+        <button className="back-btn" onClick={() => goTo('game')}>
+          ← Back
+        </button>
       </div>
 
       {/* Current User Rank */}
@@ -83,9 +85,9 @@ export default function Leaderboard({ goTo }: { goTo: (s: Screen) => void }) {
             <span>Player</span>
             <span>Score</span>
           </div>
-          {leaderboard.map(entry => (
-            <div 
-              key={entry.rank} 
+          {leaderboard.map((entry) => (
+            <div
+              key={entry.rank}
               className={`table-row ${entry.isCurrentUser ? 'current-user' : ''}`}
             >
               <span className="rank">

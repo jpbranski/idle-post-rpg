@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import type { Screen } from '../App';
 import useGameState from '../hooks/useGameState';
-import { getClickValue, getPassivePerSecond, getAwardChance } from '../../shared/helpers/calculations';
+import {
+  getClickValue,
+  getPassivePerSecond,
+  getAwardChance,
+} from '../../shared/helpers/calculations';
 import UpgradesModal from './UpgradesModal';
 import ShopModal from './ShopModal';
 import AchievementsModal from './AchievementsModal';
@@ -20,18 +24,20 @@ export default function GameScreen({ goTo }: { goTo: (s: Screen) => void }) {
   const awardChance = (getAwardChance(state) * 100).toFixed(2);
 
   // Check for active effects
-  const activeEffects = state.activeEffects.filter(e => e.endsAt > Date.now());
-  const hasSpam = activeEffects.some(e => e.type === 'spam');
-  const hasBan = activeEffects.some(e => e.type === 'ban');
-  const hasTrending = activeEffects.some(e => e.type === 'trending');
-  const hasAutoclicker = activeEffects.some(e => e.type === 'autoclicker');
+  const activeEffects = state.activeEffects.filter((e) => e.endsAt > Date.now());
+  const hasSpam = activeEffects.some((e) => e.type === 'spam');
+  const hasBan = activeEffects.some((e) => e.type === 'ban');
+  const hasTrending = activeEffects.some((e) => e.type === 'trending');
+  const hasAutoclicker = activeEffects.some((e) => e.type === 'autoclicker');
 
   return (
     <div className="screen game-screen">
       {/* Header */}
       <div className="header">
         <h1>Idle Post RPG</h1>
-        <button className="menu-btn" onClick={() => goTo('start')}>☰</button>
+        <button className="menu-btn" onClick={() => goTo('start')}>
+          ☰
+        </button>
       </div>
 
       {/* Stats Display */}
@@ -115,19 +121,11 @@ export default function GameScreen({ goTo }: { goTo: (s: Screen) => void }) {
           onClose={() => setShowUpgrades(false)}
         />
       )}
-      
-      {showShop && (
-        <ShopModal
-          state={state}
-          onClose={() => setShowShop(false)}
-        />
-      )}
-      
+
+      {showShop && <ShopModal state={state} onClose={() => setShowShop(false)} />}
+
       {showAchievements && (
-        <AchievementsModal
-          state={state}
-          onClose={() => setShowAchievements(false)}
-        />
+        <AchievementsModal state={state} onClose={() => setShowAchievements(false)} />
       )}
     </div>
   );

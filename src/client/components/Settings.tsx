@@ -19,14 +19,16 @@ export default function Settings({ goTo }: { goTo: (s: Screen) => void }) {
     <div className="screen settings-screen">
       <div className="header">
         <h2>⚙️ Settings</h2>
-        <button className="back-btn" onClick={() => goTo('game')}>← Back</button>
+        <button className="back-btn" onClick={() => goTo('game')}>
+          ← Back
+        </button>
       </div>
 
       {/* Theme Selection */}
       <section className="settings-section">
         <h3>🎨 Theme</h3>
         <div className="theme-grid">
-          {state.unlocks.themes.map(theme => (
+          {state.unlocks.themes.map((theme) => (
             <button
               key={theme}
               onClick={() => changeTheme(theme)}
@@ -49,11 +51,7 @@ export default function Settings({ goTo }: { goTo: (s: Screen) => void }) {
       <section className="settings-section">
         <h3>🔒 Privacy</h3>
         <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={state.settings.anonymous}
-            onChange={toggleAnonymous}
-          />
+          <input type="checkbox" checked={state.settings.anonymous} onChange={toggleAnonymous} />
           <span>Anonymous Mode (hide from leaderboard)</span>
         </label>
       </section>
@@ -68,7 +66,9 @@ export default function Settings({ goTo }: { goTo: (s: Screen) => void }) {
           </div>
           <div className="stat-item">
             <span className="stat-label">Total Karma Earned</span>
-            <span className="stat-value">{Math.floor(state.stats.totalKarmaEarned).toLocaleString()}</span>
+            <span className="stat-value">
+              {Math.floor(state.stats.totalKarmaEarned).toLocaleString()}
+            </span>
           </div>
           <div className="stat-item">
             <span className="stat-label">Time Played</span>
@@ -97,7 +97,7 @@ function formatTime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes}m`;
   } else if (minutes > 0) {

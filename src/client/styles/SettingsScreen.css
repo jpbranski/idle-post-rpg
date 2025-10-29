@@ -40,7 +40,7 @@
 
 .settings-header h1 {
   /* Use auto margins to push button and spacer away and center itself */
-  margin: 0 auto; 
+  margin: 0 auto;
   text-align: center;
   color: var(--accent);
   font-size: 1.5rem;
@@ -56,7 +56,10 @@
   padding: 0.25rem 0.75rem;
   font-size: 1.25rem;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition), transform var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition),
+    transform var(--transition);
 }
 
 .back-btn:hover {
@@ -97,7 +100,9 @@
   font-size: 1rem;
   cursor: pointer;
   outline: none;
-  transition: border-color var(--transition), background var(--transition);
+  transition:
+    border-color var(--transition),
+    background var(--transition);
   width: 250px;
   text-align: center;
 }
@@ -124,7 +129,10 @@
   border-radius: 8px;
   padding: 0.4rem 1rem;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition), transform var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition),
+    transform var(--transition);
 }
 
 .settings-actions button:hover {
@@ -148,7 +156,9 @@
   font-weight: bold;
   font-size: 1rem;
   cursor: pointer;
-  transition: opacity var(--transition), transform var(--transition);
+  transition:
+    opacity var(--transition),
+    transform var(--transition);
 }
 
 .delete-btn:hover {
@@ -193,7 +203,9 @@
   padding: 0.3rem 0.8rem;
   cursor: pointer;
   font-weight: 600;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition);
 }
 
 .delete-confirm button:hover:enabled {

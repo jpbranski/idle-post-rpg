@@ -3,17 +3,17 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { GameState, ActiveEffect, ShopItem } from '../../shared/types/game';
 import { DEFAULT_STATE } from '../../shared/types/game';
-import { 
-  calculateUpgradeCost, 
-  getClickValue, 
+import {
+  calculateUpgradeCost,
+  getClickValue,
   getPassivePerSecond,
   getAwardChance,
   calculateOfflineProgress,
   getAutoclickerCPS,
 } from '../../shared/helpers/calculations';
-import { 
-  UPGRADES, 
-  PASSIVE_UPGRADES, 
+import {
+  UPGRADES,
+  PASSIVE_UPGRADES,
   INFINITE_UPGRADES,
   ACHIEVEMENTS,
   RANDOM_EVENTS,
@@ -38,10 +38,10 @@ export default function useGameState() {
     return DEFAULT_STATE;
   });
 
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const eventTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const tickIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const autoclickerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const eventTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoclickerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // === SAVE GAME ===
   const saveGame = useCallback(() => {
@@ -70,21 +70,21 @@ export default function useGameState() {
   useEffect(() => {
     const offlineKarma = calculateOfflineProgress(state);
     if (offlineKarma > 0) {
-      setState(s => ({
+      setState((s) => ({
         ...s,
         karma: s.karma + offlineKarma,
         score: s.score + offlineKarma,
       }));
-      // TODO: Show notification with offline gains
     }
-    setState(s => ({ ...s, stats: { ...s.stats, lastOnline: Date.now() } }));
+    setState((s) => ({ ...s, stats: { ...s.stats, lastOnline: Date.now() } }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update lastOnline on visibility change
   useEffect(() => {
     const handler = () => {
       if (!document.hidden) {
-        setState(s => ({ ...s, stats: { ...s.stats, lastOnline: Date.now() } }));
+        setState((s) => ({ ...s, stats: { ...s.stats, lastOnline: Date.now() } }));
       }
     };
     document.addEventListener('visibilitychange', handler);
@@ -94,10 +94,10 @@ export default function useGameState() {
   // === PASSIVE TICK ===
   useEffect(() => {
     tickIntervalRef.current = setInterval(() => {
-      setState(s => {
+      setState((s) => {
         const passive = getPassivePerSecond(s);
         if (passive <= 0) return s;
-        
+
         return {
           ...s,
           karma: s.karma + passive,
@@ -110,7 +110,7 @@ export default function useGameState() {
         };
       });
     }, 1000);
-    
+
     return () => {
       if (tickIntervalRef.current) clearInterval(tickIntervalRef.current);
     };
@@ -119,10 +119,10 @@ export default function useGameState() {
   // === AUTOCLICKER TICK ===
   useEffect(() => {
     autoclickerIntervalRef.current = setInterval(() => {
-      setState(s => {
+      setState((s) => {
         const cps = getAutoclickerCPS(s);
         if (cps <= 0) return s;
-        
+
         const gain = getClickValue(s) * cps;
         return {
           ...s,
@@ -136,7 +136,7 @@ export default function useGameState() {
         };
       });
     }, 1000);
-    
+
     return () => {
       if (autoclickerIntervalRef.current) clearInterval(autoclickerIntervalRef.current);
     };
@@ -146,24 +146,24 @@ export default function useGameState() {
   useEffect(() => {
     const cleanup = setInterval(() => {
       const now = Date.now();
-      setState(s => ({
+      setState((s) => ({
         ...s,
-        activeEffects: s.activeEffects.filter(e => e.endsAt > now),
+        activeEffects: s.activeEffects.filter((e) => e.endsAt > now),
       }));
     }, 1000);
-    
+
     return () => clearInterval(cleanup);
   }, []);
 
   // === RANDOM EVENTS ===
   const scheduleNextEvent = useCallback(() => {
     const delay = Math.random() * (EVENT_INTERVAL_MAX - EVENT_INTERVAL_MIN) + EVENT_INTERVAL_MIN;
-    
+
     eventTimeoutRef.current = setTimeout(() => {
       // Pick random event based on weights
       const totalWeight = RANDOM_EVENTS.reduce((sum, e) => sum + e.weight, 0);
       let roll = Math.random() * totalWeight;
-      
+
       let selectedEvent = RANDOM_EVENTS[0];
       for (const event of RANDOM_EVENTS) {
         roll -= event.weight;
@@ -172,35 +172,44 @@ export default function useGameState() {
           break;
         }
       }
-      
+
+      if (!selectedEvent) return;
+
       const effect: ActiveEffect = {
         id: selectedEvent.id + '-' + Date.now(),
         type: selectedEvent.effect,
-        endsAt: Date.now() + (selectedEvent.duration * 1000),
-        multiplier: selectedEvent.multiplier,
+        endsAt: Date.now() + selectedEvent.duration * 1000,
       };
-      
+
+      // Add multiplier if it exists
+      if (selectedEvent.multiplier !== undefined) {
+        effect.multiplier = selectedEvent.multiplier;
+      }
+
       // For spam events, pick random passive target
       if (selectedEvent.effect === 'spam') {
-        const targets = ['comment', 'post', 'shitpost'] as const;
-        effect.target = targets[Math.floor(Math.random() * targets.length)];
+        const targets: Array<'comment' | 'post' | 'shitpost'> = ['comment', 'post', 'shitpost'];
+        const randomTarget = targets[Math.floor(Math.random() * targets.length)];
+        if (randomTarget) {
+          effect.target = randomTarget;
+        }
       }
-      
-      setState(s => ({
+
+      setState((s) => ({
         ...s,
         activeEffects: [...s.activeEffects, effect],
       }));
-      
+
       // Show toast notification
       showToast(selectedEvent.name, selectedEvent.description);
-      
+
       // Unlock hidden achievements
       if (selectedEvent.effect === 'ban') {
         unlockAchievement('banned');
       } else if (selectedEvent.effect === 'spam') {
         unlockAchievement('spam');
       }
-      
+
       scheduleNextEvent();
     }, delay);
   }, []);
@@ -214,9 +223,9 @@ export default function useGameState() {
 
   // === ACHIEVEMENT CHECKING ===
   const checkAchievements = useCallback(() => {
-    ACHIEVEMENTS.forEach(achievement => {
+    ACHIEVEMENTS.forEach((achievement) => {
       if (!state.achievements.includes(achievement.id) && achievement.condition(state)) {
-        setState(s => ({
+        setState((s) => ({
           ...s,
           achievements: [...s.achievements, achievement.id],
         }));
@@ -227,12 +236,13 @@ export default function useGameState() {
 
   useEffect(() => {
     checkAchievements();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.stats, state.karma, state.score, state.upgrades, state.passives]);
 
   const unlockAchievement = useCallback((id: string) => {
-    setState(s => {
+    setState((s) => {
       if (s.achievements.includes(id)) return s;
-      const achievement = ACHIEVEMENTS.find(a => a.id === id);
+      const achievement = ACHIEVEMENTS.find((a) => a.id === id);
       if (achievement) {
         showToast('Achievement Unlocked!', achievement.name);
       }
@@ -244,14 +254,14 @@ export default function useGameState() {
   }, []);
 
   // === ACTIONS ===
-  
+
   const handleClick = useCallback(() => {
-    setState(s => {
+    setState((s) => {
       const gain = getClickValue(s);
       const awardRoll = Math.random();
       const awardChance = getAwardChance(s);
       const gotAward = awardRoll < awardChance;
-      
+
       return {
         ...s,
         karma: s.karma + gain,
@@ -267,16 +277,16 @@ export default function useGameState() {
   }, []);
 
   const buyUpgrade = useCallback((key: keyof GameState['upgrades']) => {
-    setState(s => {
-      const upgrade = UPGRADES.find(u => u.key === key);
+    setState((s) => {
+      const upgrade = UPGRADES.find((u) => u.key === key);
       if (!upgrade) return s;
-      
+
       const currentLevel = s.upgrades[key];
       if (upgrade.maxLevel && currentLevel >= upgrade.maxLevel) return s;
-      
+
       const cost = calculateUpgradeCost(upgrade.baseCost, currentLevel, upgrade.costMultiplier);
       if (s.karma < cost) return s;
-      
+
       return {
         ...s,
         karma: s.karma - cost,
@@ -289,14 +299,14 @@ export default function useGameState() {
   }, []);
 
   const buyPassive = useCallback((key: keyof GameState['passives']) => {
-    setState(s => {
-      const upgrade = PASSIVE_UPGRADES.find(u => u.key === key);
+    setState((s) => {
+      const upgrade = PASSIVE_UPGRADES.find((u) => u.key === key);
       if (!upgrade) return s;
-      
+
       const currentLevel = s.passives[key];
       const cost = calculateUpgradeCost(upgrade.baseCost, currentLevel, upgrade.costMultiplier);
       if (s.karma < cost) return s;
-      
+
       return {
         ...s,
         karma: s.karma - cost,
@@ -309,14 +319,14 @@ export default function useGameState() {
   }, []);
 
   const buyInfinite = useCallback((key: keyof GameState['infinite']) => {
-    setState(s => {
-      const upgrade = INFINITE_UPGRADES.find(u => u.key === key);
+    setState((s) => {
+      const upgrade = INFINITE_UPGRADES.find((u) => u.key === key);
       if (!upgrade) return s;
-      
+
       const currentLevel = s.infinite[key];
       const cost = calculateUpgradeCost(upgrade.baseCost, currentLevel, upgrade.costMultiplier);
       if (s.karma < cost) return s;
-      
+
       return {
         ...s,
         karma: s.karma - cost,
@@ -329,11 +339,11 @@ export default function useGameState() {
   }, []);
 
   const buyShopItem = useCallback((item: ShopItem) => {
-    setState(s => {
+    setState((s) => {
       if (s.awards < item.cost) return s;
-      
+
       let newState = { ...s, awards: s.awards - item.cost };
-      
+
       if (item.type === 'theme' && item.value) {
         if (!newState.unlocks.themes.includes(item.value)) {
           newState.unlocks.themes = [...newState.unlocks.themes, item.value];
@@ -342,7 +352,7 @@ export default function useGameState() {
         const effect: ActiveEffect = {
           id: 'autoclicker-' + Date.now(),
           type: 'autoclicker',
-          endsAt: Date.now() + (item.duration * 1000),
+          endsAt: Date.now() + item.duration * 1000,
           clicksPerSecond: item.clicksPerSecond,
         };
         newState.activeEffects = [...newState.activeEffects, effect];
@@ -364,13 +374,13 @@ export default function useGameState() {
           settings: newState.settings,
         };
       }
-      
+
       return newState;
     });
   }, []);
 
   const changeTheme = useCallback((theme: string) => {
-    setState(s => ({
+    setState((s) => ({
       ...s,
       settings: {
         ...s.settings,
@@ -380,7 +390,7 @@ export default function useGameState() {
   }, []);
 
   const toggleAnonymous = useCallback(() => {
-    setState(s => ({
+    setState((s) => ({
       ...s,
       settings: {
         ...s.settings,

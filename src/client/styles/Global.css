@@ -9,12 +9,16 @@
   padding: 0;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   font-family: 'Inter', sans-serif;
   background: var(--bg);
   color: var(--text);
-  transition: background 0.3s ease, color 0.3s ease;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
 }
 
 /* =========================================================
@@ -24,7 +28,7 @@ html, body, #root {
 :root {
   --radius: 10px;
   --transition: 0.2s ease-in-out;
-  --shadow: 0 0 0.5rem rgba(0,0,0,0.3);
+  --shadow: 0 0 0.5rem rgba(0, 0, 0, 0.3);
 }
 
 /* =========================================================
@@ -82,7 +86,9 @@ html, body, #root {
 button {
   cursor: pointer;
   font-family: inherit;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition);
 }
 
 strong {
