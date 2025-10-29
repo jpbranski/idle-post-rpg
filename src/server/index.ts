@@ -1,6 +1,7 @@
 // src/server/index.ts
 
 import { Devvit } from '@devvit/public-api';
+import { reddit } from '@devvit/web/server';
 import type { GameState } from '../shared/types/game.js';
 
 Devvit.configure({
@@ -8,11 +9,39 @@ Devvit.configure({
   redis: true,
 });
 
+// === CREATE POST WITH SPLASH SCREEN ===
+Devvit.addMenuItem({
+  label: 'Create Idle Post RPG',
+  location: 'subreddit',
+  forUserType: 'moderator',
+  onPress: async (_event, context) => {
+    const { ui } = context;
+
+    try {
+      const post = await reddit.submitCustomPost({
+        subredditName: context.subredditName!,
+        title: 'Idle Post RPG - Farm Karma, Unlock Upgrades!',
+        splash: {
+          appDisplayName: 'Idle Post RPG',
+          backgroundUri: 'default-splash.png',
+          buttonLabel: 'Start Farming',
+          description: 'Farm karma through clicks and upgrades! Unlock themes, compete globally, and prestige for permanent bonuses.',
+          heading: 'Welcome to Idle Post RPG!',
+        },
+      });
+
+      ui.showToast({ text: 'Game post created!' });
+      ui.navigateTo(post);
+    } catch (error) {
+      console.error('Error creating post:', error);
+    }
+  },
+});
+ 
 // === SAVE GAME STATE ===
 Devvit.addSchedulerJob({
   name: 'save_game_state',
   onRun: async (event, context) => {
-    // @ts-expect-ignore
     const data = event.data as any;
     const { userId, gameState, username } = data;
     
@@ -51,13 +80,11 @@ Devvit.addSchedulerJob({
 Devvit.addSchedulerJob({
   name: 'load_game_state',
   onRun: async (event, context) => {
-    // @ts-expect-ignore
     const { userId } = event.data as any;
     
     try {
       const data = await context.redis.get(`player:${userId}:save`);
       console.log('Game state loaded for user:', userId, data ? 'found' : 'not found');
-      // Return is not supported in scheduler jobs - use Redis or other communication
     } catch (error) {
       console.error('Load game state error:', error);
     }
@@ -68,7 +95,6 @@ Devvit.addSchedulerJob({
 Devvit.addSchedulerJob({
   name: 'get_leaderboard',
   onRun: async (event, context) => {
-    // @ts-expect-ignore
     const { limit = 25 } = event.data as any;
     
     try {
@@ -106,7 +132,6 @@ Devvit.addSchedulerJob({
 Devvit.addSchedulerJob({
   name: 'get_user_rank',
   onRun: async (event, context) => {
-    // @ts-expect-ignore
     const { userId } = event.data as any;
     
     try {
