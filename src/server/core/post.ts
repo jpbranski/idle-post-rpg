@@ -11,10 +11,9 @@ export const createPost = async () => {
       // Splash Screen Configuration
       appDisplayName: 'idle-post-rpg',
       backgroundUri: 'default-splash.png',
-      buttonLabel: 'Tap to Start',
-      description: 'An exciting interactive experience',
-      entryUri: 'index.html',
-      heading: 'Welcome to the Game!',
+      buttonLabel: 'Begin Farming',
+      description: 'Your idle karma farming adventures begin here.',
+      heading: 'Idle Post RPG!',
       appIconUri: 'default-icon.png',
     },
     postData: {

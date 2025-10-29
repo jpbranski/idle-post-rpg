@@ -1,135 +1,134 @@
-import express from 'express';
-import { InitResponse, IncrementResponse, DecrementResponse } from '../shared/types/api';
-import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
-import { createPost } from './core/post';
+// src/server/index.ts
 
-const app = express();
+import { Devvit } from '@devvit/public-api';
+import type { GameState } from '../shared/types/game.js';
 
-// Middleware for JSON body parsing
-app.use(express.json());
-// Middleware for URL-encoded body parsing
-app.use(express.urlencoded({ extended: true }));
-// Middleware for plain text body parsing
-app.use(express.text());
+Devvit.configure({
+  redditAPI: true,
+  redis: true,
+});
 
-const router = express.Router();
-
-router.get<{ postId: string }, InitResponse | { status: string; message: string }>(
-  '/api/init',
-  async (_req, res): Promise<void> => {
-    const { postId } = context;
-
-    if (!postId) {
-      console.error('API Init Error: postId not found in devvit context');
-      res.status(400).json({
-        status: 'error',
-        message: 'postId is required but missing from context',
-      });
-      return;
-    }
-
+// === SAVE GAME STATE ===
+Devvit.addSchedulerJob({
+  name: 'save_game_state',
+  onRun: async (event, context) => {
+    // @ts-expect-ignore
+    const data = event.data as any;
+    const { userId, gameState, username } = data;
+    
     try {
-      const [count, username] = await Promise.all([
-        redis.get('count'),
-        reddit.getCurrentUsername(),
-      ]);
+      // Save player data
+      await context.redis.set(
+        `player:${userId}:save`,
+        JSON.stringify(gameState)
+      );
 
-      res.json({
-        type: 'init',
-        postId: postId,
-        count: count ? parseInt(count) : 0,
-        username: username ?? 'anonymous',
-      });
-    } catch (error) {
-      console.error(`API Init Error for post ${postId}:`, error);
-      let errorMessage = 'Unknown error during initialization';
-      if (error instanceof Error) {
-        errorMessage = `Initialization failed: ${error.message}`;
+      // Update leaderboard if not anonymous
+      if (!gameState.settings.anonymous && gameState.score > 0) {
+        await context.redis.zAdd('leaderboard:global', {
+          member: userId,
+          score: gameState.score,
+        });
+        
+        // Store username for display
+        await context.redis.hSet(`player:${userId}:info`, {
+          username: username || 'Player',
+          score: gameState.score.toString(),
+        });
+      } else if (gameState.settings.anonymous) {
+        // Remove from leaderboard if anonymous
+        await context.redis.zRem('leaderboard:global', [userId]);
       }
-      res.status(400).json({ status: 'error', message: errorMessage });
+      
+      console.log('Game state saved successfully for user:', userId);
+    } catch (error) {
+      console.error('Save game state error:', error);
     }
-  }
-);
-
-router.post<{ postId: string }, IncrementResponse | { status: string; message: string }, unknown>(
-  '/api/increment',
-  async (_req, res): Promise<void> => {
-    const { postId } = context;
-    if (!postId) {
-      res.status(400).json({
-        status: 'error',
-        message: 'postId is required',
-      });
-      return;
-    }
-
-    res.json({
-      count: await redis.incrBy('count', 1),
-      postId,
-      type: 'increment',
-    });
-  }
-);
-
-router.post<{ postId: string }, DecrementResponse | { status: string; message: string }, unknown>(
-  '/api/decrement',
-  async (_req, res): Promise<void> => {
-    const { postId } = context;
-    if (!postId) {
-      res.status(400).json({
-        status: 'error',
-        message: 'postId is required',
-      });
-      return;
-    }
-
-    res.json({
-      count: await redis.incrBy('count', -1),
-      postId,
-      type: 'decrement',
-    });
-  }
-);
-
-router.post('/internal/on-app-install', async (_req, res): Promise<void> => {
-  try {
-    const post = await createPost();
-
-    res.json({
-      status: 'success',
-      message: `Post created in subreddit ${context.subredditName} with id ${post.id}`,
-    });
-  } catch (error) {
-    console.error(`Error creating post: ${error}`);
-    res.status(400).json({
-      status: 'error',
-      message: 'Failed to create post',
-    });
-  }
+  },
 });
 
-router.post('/internal/menu/post-create', async (_req, res): Promise<void> => {
-  try {
-    const post = await createPost();
-
-    res.json({
-      navigateTo: `https://reddit.com/r/${context.subredditName}/comments/${post.id}`,
-    });
-  } catch (error) {
-    console.error(`Error creating post: ${error}`);
-    res.status(400).json({
-      status: 'error',
-      message: 'Failed to create post',
-    });
-  }
+// === LOAD GAME STATE ===
+Devvit.addSchedulerJob({
+  name: 'load_game_state',
+  onRun: async (event, context) => {
+    // @ts-expect-ignore
+    const { userId } = event.data as any;
+    
+    try {
+      const data = await context.redis.get(`player:${userId}:save`);
+      console.log('Game state loaded for user:', userId, data ? 'found' : 'not found');
+      // Return is not supported in scheduler jobs - use Redis or other communication
+    } catch (error) {
+      console.error('Load game state error:', error);
+    }
+  },
 });
 
-// Use router middleware
-app.use(router);
+// === GET LEADERBOARD ===
+Devvit.addSchedulerJob({
+  name: 'get_leaderboard',
+  onRun: async (event, context) => {
+    // @ts-expect-ignore
+    const { limit = 25 } = event.data as any;
+    
+    try {
+      // Get top scores (highest first)
+      const entries = await context.redis.zRange(
+        'leaderboard:global',
+        -limit,
+        -1
+      );
+      
+      // Reverse to get highest scores first
+      const topPlayers = entries.reverse();
+      
+      // Fetch usernames for each player
+      const leaderboard = await Promise.all(
+        topPlayers.map(async (entry, index) => {
+          const info = await context.redis.hGetAll(`player:${entry.member}:info`);
+          return {
+            userId: entry.member,
+            username: info.username || 'Anonymous',
+            score: entry.score,
+            rank: index + 1,
+          };
+        })
+      );
+      
+      console.log('Leaderboard fetched:', leaderboard.length, 'entries');
+    } catch (error) {
+      console.error('Get leaderboard error:', error);
+    }
+  },
+});
 
-// Get port from environment variable with fallback
-const port = getServerPort();
+// === GET USER RANK ===
+Devvit.addSchedulerJob({
+  name: 'get_user_rank',
+  onRun: async (event, context) => {
+    // @ts-expect-ignore
+    const { userId } = event.data as any;
+    
+    try {
+      // Get total count
+      const totalPlayers = await context.redis.zCard('leaderboard:global');
+      
+      // Get user's rank (0-indexed)
+      const rank = await context.redis.zRank('leaderboard:global', userId);
+      
+      if (rank === undefined) {
+        console.log('User not found in leaderboard:', userId);
+        return;
+      }
+      
+      // Convert to 1-indexed rank (counting from top)
+      const actualRank = totalPlayers - rank;
+      
+      console.log('User rank:', userId, actualRank);
+    } catch (error) {
+      console.error('Get user rank error:', error);
+    }
+  },
+});
 
-const server = createServer(app);
-server.on('error', (err) => console.error(`server error; ${err.stack}`));
-server.listen(port);
+export default Devvit;

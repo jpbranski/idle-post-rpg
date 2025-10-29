@@ -1,11 +1,17 @@
 {
   "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
-  "name": "idle-post-rpg",
+  "name": "idle-post-rpg",  
   "post": {
     "dir": "dist/client",
     "entrypoints": {
       "default": {
-        "entry": "index.html"
+        "entry": "index.html",
+        "splash": {
+          "title": "Idle Post RPG",
+          "description": "Click to earn karma, unlock passive income, and compete on global leaderboards!",
+          "image": "splash-bg.png",
+          "button": "Start Playing"
+        }
       }
     }
   },
@@ -19,8 +25,8 @@
   "menu": {
     "items": [
       {
-        "label": "Create a new post",
-        "description": "idle-post-rpg",
+        "label": "Create Idle Post RPG",
+        "description": "Start a new game post",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/post-create"

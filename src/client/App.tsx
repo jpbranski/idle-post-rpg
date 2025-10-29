@@ -1,21 +1,24 @@
-import React, { useEffect, useState } from 'react';
+// src/client/App.tsx
+
+import { useEffect, useState } from 'react';
 import StartScreen from './components/StartScreen';
 import GameScreen from './components/GameScreen';
 import Leaderboard from './components/Leaderboard';
 import Settings from './components/Settings';
-import Upgrades from './components/Upgrades';
 import useGameState from './hooks/useGameState';
 
-export type Screen = 'start' | 'game' | 'leaderboard' | 'settings' | 'upgrades';
+export type Screen = 'start' | 'game' | 'leaderboard' | 'settings';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('start');
   const { state } = useGameState();
 
+  // Apply theme to document
   useEffect(() => {
-    document.body.setAttribute('data-theme', state.theme ?? 'light');
-  }, [state.theme]);
+    document.body.setAttribute('data-theme', state.settings.theme);
+  }, [state.settings.theme]);
 
+  // Render current screen
   switch (screen) {
     case 'game':
       return <GameScreen goTo={setScreen} />;
@@ -23,8 +26,6 @@ export default function App() {
       return <Leaderboard goTo={setScreen} />;
     case 'settings':
       return <Settings goTo={setScreen} />;
-    case 'upgrades':
-      return <Upgrades goTo={setScreen} />;
     default:
       return <StartScreen goTo={setScreen} />;
   }

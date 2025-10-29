@@ -1,0 +1,90 @@
+/* =========================================================
+   GLOBAL BASE & THEME SYSTEM
+   ========================================================= */
+
+/* Base reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* =========================================================
+   BASE THEME TOKENS
+   ========================================================= */
+
+:root {
+  --radius: 10px;
+  --transition: 0.2s ease-in-out;
+  --shadow: 0 0 0.5rem rgba(0,0,0,0.3);
+}
+
+/* =========================================================
+   LIGHT THEME — Reddit Modern Light
+   ========================================================= */
+
+[data-theme='light'] {
+  --accent: #ff4500;
+  --accent-hover: #e03d00;
+
+  --bg: #ffffff;
+  --text: #1a1a1b;
+  --text-muted: #787c7e;
+
+  --card-bg: #f6f7f8;
+  --border: #d3d6da;
+}
+
+/* =========================================================
+   DARK THEME — Reddit Modern Dark
+   ========================================================= */
+
+[data-theme='dark'] {
+  --accent: #ff4500;
+  --accent-hover: #ff652f;
+
+  --bg: #1a1a1b;
+  --text: #d7dadc;
+  --text-muted: #9a9c9f;
+
+  --card-bg: #272729;
+  --border: #343536;
+}
+
+/* =========================================================
+   OLDSCHOOL THEME — old.reddit inspired
+   ========================================================= */
+
+[data-theme='oldschool'] {
+  --accent: #ff4500;
+  --accent-hover: #d63b00;
+
+  --bg: #dae0e6;
+  --text: #000000;
+  --text-muted: #444;
+
+  --card-bg: #ffffff;
+  --border: #bdbfc1;
+}
+
+/* =========================================================
+   GLOBAL UTILITIES
+   ========================================================= */
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--transition), color var(--transition);
+}
+
+strong {
+  font-weight: 700;
+}

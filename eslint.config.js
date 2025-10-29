@@ -37,7 +37,11 @@ export default defineConfig([
     files: ['src/client/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2023,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        localStorage: 'readonly',
+        window: 'readonly',
+      },
     },
     plugins: {
       'react-hooks': reactHooks,
@@ -46,6 +50,7 @@ export default defineConfig([
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'no-undef': 'off', // TypeScript handles this better
     },
   },
   {

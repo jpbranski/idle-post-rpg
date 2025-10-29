@@ -1,96 +1,134 @@
+// src/client/components/GameScreen.tsx
+
 import { useState } from 'react';
-import useGameState from '../hooks/useGameState';
-import { useTicker } from '../hooks/useTicker';
-import Upgrades from './Upgrades';
 import type { Screen } from '../App';
-import type { GameState } from '../hooks/useGameState';
+import useGameState from '../hooks/useGameState';
+import { getClickValue, getPassivePerSecond, getAwardChance } from '../../shared/helpers/calculations';
+import UpgradesModal from './UpgradesModal';
+import ShopModal from './ShopModal';
+import AchievementsModal from './AchievementsModal';
 import '../styles/GameScreen.css';
 
-const REPLY_TIERS = [1, 2, 3, 5, 7, 10];
-
 export default function GameScreen({ goTo }: { goTo: (s: Screen) => void }) {
-  const { state, setState, addKarma, buyUpgrade, buyInfinite } = useGameState();
+  const { state, handleClick, buyUpgrade, buyPassive, buyInfinite } = useGameState();
   const [showUpgrades, setShowUpgrades] = useState(false);
-  useTicker(state, addKarma);
+  const [showShop, setShowShop] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
 
-  const getReplyGain = (lvl: number | undefined): number => {
-    const safeLvl = lvl ?? 0;
-    return REPLY_TIERS[Math.min(safeLvl, REPLY_TIERS.length - 1)] ?? 0;
-  };
+  const clickValue = getClickValue(state);
+  const passivePerSec = getPassivePerSecond(state);
+  const awardChance = (getAwardChance(state) * 100).toFixed(2);
 
-  const handleReply = () => {
-    const gain = getReplyGain(state.upgrades?.reply);
-    addKarma(gain);
-
-    // Award chance (1–5%)
-    const chance = Math.min(state.upgrades?.chair ?? 0, 5) * 0.01;
-    if (Math.random() < chance) {
-      setState(s => ({ ...s, awards: (s.awards ?? 0) + 1 }));
-    }
-  };
-
-  const totalPCBonus = (state.upgrades.pc ?? 0) * 10; // %
-  const awardChance = Math.min(state.upgrades.chair ?? 0, 5); // %
+  // Check for active effects
+  const activeEffects = state.activeEffects.filter(e => e.endsAt > Date.now());
+  const hasSpam = activeEffects.some(e => e.type === 'spam');
+  const hasBan = activeEffects.some(e => e.type === 'ban');
+  const hasTrending = activeEffects.some(e => e.type === 'trending');
+  const hasAutoclicker = activeEffects.some(e => e.type === 'autoclicker');
 
   return (
     <div className="screen game-screen">
-      <h1 className="title">Idle Post RPG</h1>
-
-      <div className="stats">
-        <p>Karma: <strong>{state.karma}</strong></p>
-        <p>Lifetime Karma: {state.lifetimeKarma}</p>
-        <p>Awards: {state.awards}</p>
-        <p>Passive Karma/sec: {estimatePassive(state)}</p>
-        <p>PC Bonus: +{totalPCBonus}%</p>
-        <p>Award Chance: {awardChance}%</p>
+      {/* Header */}
+      <div className="header">
+        <h1>Idle Post RPG</h1>
+        <button className="menu-btn" onClick={() => goTo('start')}>☰</button>
       </div>
 
-      <div className="actions">
-        <button className="main" onClick={handleReply}>
-          Reply (+{getReplyGain(state.upgrades.reply)})
-        </button>
-        {state.upgrades.comment > 0 && <button>Comment (+3)</button>}
-        {state.upgrades.post > 0 && <button>Post (+8)</button>}
-        {state.upgrades.shitpost > 0 && <button>Shitpost (+15)</button>}
+      {/* Stats Display */}
+      <div className="stats-panel">
+        <div className="stat">
+          <span className="label">Karma</span>
+          <span className="value">{Math.floor(state.karma).toLocaleString()}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Score</span>
+          <span className="value">{Math.floor(state.score).toLocaleString()}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Awards</span>
+          <span className="value">{state.awards}</span>
+        </div>
+        <div className="stat">
+          <span className="label">Passive/sec</span>
+          <span className="value">{passivePerSec.toLocaleString()}</span>
+        </div>
       </div>
 
-      <div className="nav">
-        <button onClick={() => setShowUpgrades(true)}>Upgrades</button>
-        <button onClick={() => goTo('settings')}>Settings</button>
-        <button onClick={() => goTo('start')}>Main Menu</button>
-      </div>
-
-      {showUpgrades && (
-        <div className="modal-overlay" onClick={() => setShowUpgrades(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <Upgrades
-              state={state}
-              buyUpgrade={buyUpgrade}
-              buyInfinite={buyInfinite}
-              onClose={() => setShowUpgrades(false)}
-            />
-          </div>
+      {/* Active Effects */}
+      {activeEffects.length > 0 && (
+        <div className="active-effects">
+          {hasTrending && <div className="effect trending">🔥 TRENDING! 2x Karma</div>}
+          {hasBan && <div className="effect ban">🚫 BANNED! 50% Penalty</div>}
+          {hasSpam && <div className="effect spam">⚠️ Spam Filter Active</div>}
+          {hasAutoclicker && <div className="effect autoclicker">🤖 Autoclicker Active</div>}
         </div>
       )}
+
+      {/* Main Click Button */}
+      <div className="click-area">
+        <button className="click-btn" onClick={handleClick}>
+          <div className="btn-label">Reply</div>
+          <div className="btn-value">+{clickValue} Karma</div>
+        </button>
+        <div className="click-info">
+          <span>Award Chance: {awardChance}%</span>
+          <span>Total Clicks: {state.stats.totalClicks.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="quick-actions">
+        <button className="action-btn" onClick={() => setShowUpgrades(true)}>
+          <span className="icon">⬆️</span>
+          <span>Upgrades</span>
+        </button>
+        <button className="action-btn" onClick={() => setShowShop(true)}>
+          <span className="icon">🏪</span>
+          <span>Shop</span>
+          {state.awards > 0 && <span className="badge">{state.awards}</span>}
+        </button>
+        <button className="action-btn" onClick={() => setShowAchievements(true)}>
+          <span className="icon">🏆</span>
+          <span>Achievements</span>
+          <span className="badge">{state.achievements.length}</span>
+        </button>
+        <button className="action-btn" onClick={() => goTo('leaderboard')}>
+          <span className="icon">📊</span>
+          <span>Leaderboard</span>
+        </button>
+      </div>
+
+      {/* Prestige Info */}
+      {state.prestige.level > 0 && (
+        <div className="prestige-info">
+          ⭐ Prestige Level {state.prestige.level} (+{state.prestige.level * 10}% Karma)
+        </div>
+      )}
+
+      {/* Modals */}
+      {showUpgrades && (
+        <UpgradesModal
+          state={state}
+          buyUpgrade={buyUpgrade}
+          buyPassive={buyPassive}
+          buyInfinite={buyInfinite}
+          onClose={() => setShowUpgrades(false)}
+        />
+      )}
+      
+      {showShop && (
+        <ShopModal
+          state={state}
+          onClose={() => setShowShop(false)}
+        />
+      )}
+      
+      {showAchievements && (
+        <AchievementsModal
+          state={state}
+          onClose={() => setShowAchievements(false)}
+        />
+      )}
     </div>
-  );
-}
-
-function estimatePassive(state: GameState): number {
-  const COMMENT_TIERS = [3, 5, 7, 10, 15, 20];
-  const POST_TIERS = [10, 15, 25, 50, 75, 100];
-  const SHITPOST_TIERS = [25, 50, 100, 150, 250];
-
-  const upgrades = state.upgrades ?? {};
-  const getTierValue = (tiers: number[], level: number): number => {
-    if (level <= 0) return 0;
-    const index = Math.min(level - 1, tiers.length - 1);
-    return tiers[index] ?? 0;
-  };
-
-  return (
-    getTierValue(COMMENT_TIERS, upgrades.comment ?? 0) +
-    getTierValue(POST_TIERS, upgrades.post ?? 0) +
-    getTierValue(SHITPOST_TIERS, upgrades.shitpost ?? 0)
   );
 }

@@ -1,108 +1,416 @@
-import { useState } from 'react';
-import { UPGRADES, getCost, getInfiniteCost } from './useUpgrades';
+// src/client/hooks/useGameState.ts
 
-export interface GameState {
-  karma: number;
-  lifetimeKarma: number;
-  awards: number;
-  upgrades: {
-    reply: number;
-    comment: number;
-    post: number;
-    shitpost: number;
-    pc: number;
-    chair: number;
-  };
-  infinite: {
-    altAccounts: number;
-    influencer: number;
-  };
-  theme: 'light' | 'dark' | 'oldschool';
-}
+import { useState, useCallback, useEffect, useRef } from 'react';
+import type { GameState, ActiveEffect, ShopItem } from '../../shared/types/game';
+import { DEFAULT_STATE } from '../../shared/types/game';
+import { 
+  calculateUpgradeCost, 
+  getClickValue, 
+  getPassivePerSecond,
+  getAwardChance,
+  calculateOfflineProgress,
+  getAutoclickerCPS,
+} from '../../shared/helpers/calculations';
+import { 
+  UPGRADES, 
+  PASSIVE_UPGRADES, 
+  INFINITE_UPGRADES,
+  ACHIEVEMENTS,
+  RANDOM_EVENTS,
+  EVENT_INTERVAL_MIN,
+  EVENT_INTERVAL_MAX,
+} from '../../shared/constants/game';
+
+const SAVE_KEY = 'idle-post-rpg-save';
+const SAVE_INTERVAL = 30000; // 30 seconds
 
 export default function useGameState() {
-  const [state, setState] = useState<GameState>({
-    karma: 0,
-    lifetimeKarma: 0,
-    awards: 0,
-    upgrades: {
-      reply: 0,
-      comment: 0,
-      post: 0,
-      shitpost: 0,
-      pc: 0,
-      chair: 0,
-    },
-    infinite: {
-      altAccounts: 0,
-      influencer: 0,
-    },
-    theme: 'light',
+  const [state, setState] = useState<GameState>(() => {
+    try {
+      const saved = localStorage.getItem(SAVE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...DEFAULT_STATE, ...parsed };
+      }
+    } catch (e) {
+      console.error('Failed to load save:', e);
+    }
+    return DEFAULT_STATE;
   });
 
-  // === Core game logic ===
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const eventTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tickIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoclickerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  function addKarma(amount: number) {
-    setState(s => ({
-      ...s,
-      karma: s.karma + amount,
-      lifetimeKarma: s.lifetimeKarma + amount,
-    }));
-  }
+  // === SAVE GAME ===
+  const saveGame = useCallback(() => {
+    try {
+      const toSave = { ...state, stats: { ...state.stats, lastSave: Date.now() } };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
+    } catch (e) {
+      console.error('Failed to save:', e);
+    }
+  }, [state]);
 
-  function spendKarma(amount: number) {
-    setState(s => ({
-      ...s,
-      karma: Math.max(0, s.karma - amount),
-    }));
-  }
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    saveTimeoutRef.current = setInterval(saveGame, SAVE_INTERVAL);
+    return () => {
+      if (saveTimeoutRef.current) clearInterval(saveTimeoutRef.current);
+    };
+  }, [saveGame]);
 
-  // === Upgrades ===
+  // Save on unmount
+  useEffect(() => {
+    return () => saveGame();
+  }, [saveGame]);
 
-  function buyUpgrade(key: keyof GameState['upgrades'], baseCost: number, multiplier: number) {
+  // === OFFLINE PROGRESS ===
+  useEffect(() => {
+    const offlineKarma = calculateOfflineProgress(state);
+    if (offlineKarma > 0) {
+      setState(s => ({
+        ...s,
+        karma: s.karma + offlineKarma,
+        score: s.score + offlineKarma,
+      }));
+      // TODO: Show notification with offline gains
+    }
+    setState(s => ({ ...s, stats: { ...s.stats, lastOnline: Date.now() } }));
+  }, []);
+
+  // Update lastOnline on visibility change
+  useEffect(() => {
+    const handler = () => {
+      if (!document.hidden) {
+        setState(s => ({ ...s, stats: { ...s.stats, lastOnline: Date.now() } }));
+      }
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, []);
+
+  // === PASSIVE TICK ===
+  useEffect(() => {
+    tickIntervalRef.current = setInterval(() => {
+      setState(s => {
+        const passive = getPassivePerSecond(s);
+        if (passive <= 0) return s;
+        
+        return {
+          ...s,
+          karma: s.karma + passive,
+          score: s.score + passive,
+          stats: {
+            ...s.stats,
+            totalKarmaEarned: s.stats.totalKarmaEarned + passive,
+            timePlayed: s.stats.timePlayed + 1,
+          },
+        };
+      });
+    }, 1000);
+    
+    return () => {
+      if (tickIntervalRef.current) clearInterval(tickIntervalRef.current);
+    };
+  }, []);
+
+  // === AUTOCLICKER TICK ===
+  useEffect(() => {
+    autoclickerIntervalRef.current = setInterval(() => {
+      setState(s => {
+        const cps = getAutoclickerCPS(s);
+        if (cps <= 0) return s;
+        
+        const gain = getClickValue(s) * cps;
+        return {
+          ...s,
+          karma: s.karma + gain,
+          score: s.score + gain,
+          stats: {
+            ...s.stats,
+            totalClicks: s.stats.totalClicks + cps,
+            totalKarmaEarned: s.stats.totalKarmaEarned + gain,
+          },
+        };
+      });
+    }, 1000);
+    
+    return () => {
+      if (autoclickerIntervalRef.current) clearInterval(autoclickerIntervalRef.current);
+    };
+  }, []);
+
+  // === ACTIVE EFFECTS CLEANUP ===
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      const now = Date.now();
+      setState(s => ({
+        ...s,
+        activeEffects: s.activeEffects.filter(e => e.endsAt > now),
+      }));
+    }, 1000);
+    
+    return () => clearInterval(cleanup);
+  }, []);
+
+  // === RANDOM EVENTS ===
+  const scheduleNextEvent = useCallback(() => {
+    const delay = Math.random() * (EVENT_INTERVAL_MAX - EVENT_INTERVAL_MIN) + EVENT_INTERVAL_MIN;
+    
+    eventTimeoutRef.current = setTimeout(() => {
+      // Pick random event based on weights
+      const totalWeight = RANDOM_EVENTS.reduce((sum, e) => sum + e.weight, 0);
+      let roll = Math.random() * totalWeight;
+      
+      let selectedEvent = RANDOM_EVENTS[0];
+      for (const event of RANDOM_EVENTS) {
+        roll -= event.weight;
+        if (roll <= 0) {
+          selectedEvent = event;
+          break;
+        }
+      }
+      
+      const effect: ActiveEffect = {
+        id: selectedEvent.id + '-' + Date.now(),
+        type: selectedEvent.effect,
+        endsAt: Date.now() + (selectedEvent.duration * 1000),
+        multiplier: selectedEvent.multiplier,
+      };
+      
+      // For spam events, pick random passive target
+      if (selectedEvent.effect === 'spam') {
+        const targets = ['comment', 'post', 'shitpost'] as const;
+        effect.target = targets[Math.floor(Math.random() * targets.length)];
+      }
+      
+      setState(s => ({
+        ...s,
+        activeEffects: [...s.activeEffects, effect],
+      }));
+      
+      // Show toast notification
+      showToast(selectedEvent.name, selectedEvent.description);
+      
+      // Unlock hidden achievements
+      if (selectedEvent.effect === 'ban') {
+        unlockAchievement('banned');
+      } else if (selectedEvent.effect === 'spam') {
+        unlockAchievement('spam');
+      }
+      
+      scheduleNextEvent();
+    }, delay);
+  }, []);
+
+  useEffect(() => {
+    scheduleNextEvent();
+    return () => {
+      if (eventTimeoutRef.current) clearTimeout(eventTimeoutRef.current);
+    };
+  }, [scheduleNextEvent]);
+
+  // === ACHIEVEMENT CHECKING ===
+  const checkAchievements = useCallback(() => {
+    ACHIEVEMENTS.forEach(achievement => {
+      if (!state.achievements.includes(achievement.id) && achievement.condition(state)) {
+        setState(s => ({
+          ...s,
+          achievements: [...s.achievements, achievement.id],
+        }));
+        showToast('Achievement Unlocked!', achievement.name);
+      }
+    });
+  }, [state]);
+
+  useEffect(() => {
+    checkAchievements();
+  }, [state.stats, state.karma, state.score, state.upgrades, state.passives]);
+
+  const unlockAchievement = useCallback((id: string) => {
     setState(s => {
-      const level = s.upgrades[key] ?? 0;
+      if (s.achievements.includes(id)) return s;
+      const achievement = ACHIEVEMENTS.find(a => a.id === id);
+      if (achievement) {
+        showToast('Achievement Unlocked!', achievement.name);
+      }
+      return {
+        ...s,
+        achievements: [...s.achievements, id],
+      };
+    });
+  }, []);
+
+  // === ACTIONS ===
+  
+  const handleClick = useCallback(() => {
+    setState(s => {
+      const gain = getClickValue(s);
+      const awardRoll = Math.random();
+      const awardChance = getAwardChance(s);
+      const gotAward = awardRoll < awardChance;
+      
+      return {
+        ...s,
+        karma: s.karma + gain,
+        score: s.score + gain,
+        awards: gotAward ? s.awards + 1 : s.awards,
+        stats: {
+          ...s.stats,
+          totalClicks: s.stats.totalClicks + 1,
+          totalKarmaEarned: s.stats.totalKarmaEarned + gain,
+        },
+      };
+    });
+  }, []);
+
+  const buyUpgrade = useCallback((key: keyof GameState['upgrades']) => {
+    setState(s => {
       const upgrade = UPGRADES.find(u => u.key === key);
-      const cost = getCost(baseCost, level, multiplier);
-
+      if (!upgrade) return s;
+      
+      const currentLevel = s.upgrades[key];
+      if (upgrade.maxLevel && currentLevel >= upgrade.maxLevel) return s;
+      
+      const cost = calculateUpgradeCost(upgrade.baseCost, currentLevel, upgrade.costMultiplier);
       if (s.karma < cost) return s;
-      if (upgrade?.maxLevel && level >= upgrade.maxLevel) return s;
-
+      
       return {
         ...s,
         karma: s.karma - cost,
         upgrades: {
           ...s.upgrades,
-          [key]: level + 1,
+          [key]: currentLevel + 1,
         },
       };
     });
-  }
+  }, []);
 
-  function buyInfinite(key: keyof GameState['infinite'], baseCost: number, multiplier: number) {
+  const buyPassive = useCallback((key: keyof GameState['passives']) => {
     setState(s => {
-      const level = s.infinite[key] ?? 0;
-      const cost = getInfiniteCost(baseCost, level, multiplier);
-
+      const upgrade = PASSIVE_UPGRADES.find(u => u.key === key);
+      if (!upgrade) return s;
+      
+      const currentLevel = s.passives[key];
+      const cost = calculateUpgradeCost(upgrade.baseCost, currentLevel, upgrade.costMultiplier);
       if (s.karma < cost) return s;
+      
+      return {
+        ...s,
+        karma: s.karma - cost,
+        passives: {
+          ...s.passives,
+          [key]: currentLevel + 1,
+        },
+      };
+    });
+  }, []);
 
+  const buyInfinite = useCallback((key: keyof GameState['infinite']) => {
+    setState(s => {
+      const upgrade = INFINITE_UPGRADES.find(u => u.key === key);
+      if (!upgrade) return s;
+      
+      const currentLevel = s.infinite[key];
+      const cost = calculateUpgradeCost(upgrade.baseCost, currentLevel, upgrade.costMultiplier);
+      if (s.karma < cost) return s;
+      
       return {
         ...s,
         karma: s.karma - cost,
         infinite: {
           ...s.infinite,
-          [key]: level + 1,
+          [key]: currentLevel + 1,
         },
       };
     });
-  }
+  }, []);
+
+  const buyShopItem = useCallback((item: ShopItem) => {
+    setState(s => {
+      if (s.awards < item.cost) return s;
+      
+      let newState = { ...s, awards: s.awards - item.cost };
+      
+      if (item.type === 'theme' && item.value) {
+        if (!newState.unlocks.themes.includes(item.value)) {
+          newState.unlocks.themes = [...newState.unlocks.themes, item.value];
+        }
+      } else if (item.type === 'autoclicker' && item.duration && item.clicksPerSecond) {
+        const effect: ActiveEffect = {
+          id: 'autoclicker-' + Date.now(),
+          type: 'autoclicker',
+          endsAt: Date.now() + (item.duration * 1000),
+          clicksPerSecond: item.clicksPerSecond,
+        };
+        newState.activeEffects = [...newState.activeEffects, effect];
+      } else if (item.type === 'prestige') {
+        // Handle prestige
+        newState = {
+          ...DEFAULT_STATE,
+          prestige: {
+            level: newState.prestige.level + 1,
+            badges: [...newState.prestige.badges, `prestige-${newState.prestige.level + 1}`],
+          },
+          unlocks: newState.unlocks, // Keep unlocks
+          achievements: newState.achievements, // Keep achievements
+          stats: {
+            ...DEFAULT_STATE.stats,
+            totalKarmaEarned: newState.stats.totalKarmaEarned,
+            timePlayed: newState.stats.timePlayed,
+          },
+          settings: newState.settings,
+        };
+      }
+      
+      return newState;
+    });
+  }, []);
+
+  const changeTheme = useCallback((theme: string) => {
+    setState(s => ({
+      ...s,
+      settings: {
+        ...s.settings,
+        theme,
+      },
+    }));
+  }, []);
+
+  const toggleAnonymous = useCallback(() => {
+    setState(s => ({
+      ...s,
+      settings: {
+        ...s.settings,
+        anonymous: !s.settings.anonymous,
+      },
+    }));
+  }, []);
+
+  const resetGame = useCallback(() => {
+    localStorage.removeItem(SAVE_KEY);
+    setState(DEFAULT_STATE);
+  }, []);
 
   return {
     state,
     setState,
-    addKarma,
-    spendKarma,
+    handleClick,
     buyUpgrade,
+    buyPassive,
     buyInfinite,
+    buyShopItem,
+    changeTheme,
+    toggleAnonymous,
+    resetGame,
+    saveGame,
   };
+}
+
+// Toast notification helper (placeholder - implement with proper UI)
+function showToast(title: string, message: string) {
+  console.log(`[TOAST] ${title}: ${message}`);
+  // TODO: Implement actual toast UI
 }

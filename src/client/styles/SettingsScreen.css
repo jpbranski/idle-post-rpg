@@ -1,0 +1,222 @@
+/* Screen container */
+.settings-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  padding: 0 1rem; /* The 1em horizontal padding on the screen container */
+  animation: fadeIn 0.3s ease-out;
+  position: relative;
+}
+
+/* Header pinned to top - MODIFIED FOR ALIGNMENT */
+.settings-header {
+  width: 100%;
+  max-width: 800px; /* Optional: Limit max width on large screens */
+  margin: 0 auto; /* Center the header content itself within the screen padding */
+  display: flex;
+  align-items: center;
+  /* Removed justify-content: flex-start to allow the centering technique */
+  padding: 1rem 0; /* Vertical padding only; relying on .settings-screen for horizontal 1rem padding */
+  /* REMOVED: position: absolute; top: 0; left: 0; */
+}
+
+/* Invisible element to balance the back-btn and truly center the H1 */
+.settings-header::after {
+  content: '';
+  /* Calculating width of .back-btn: 
+     2 * 2px (border) 
+     + 2 * 0.75rem (padding) 
+     + 1.25rem (font-size/content width) 
+     ~ 3.25rem + 4px (approx) */
+  width: calc(1.5rem + 4px); /* Approximation based on padding/font-size */
+  height: 1px;
+  visibility: hidden;
+  /* Add margin to match the gap */
+  margin-left: 1rem;
+}
+
+.settings-header h1 {
+  /* Use auto margins to push button and spacer away and center itself */
+  margin: 0 auto; 
+  text-align: center;
+  color: var(--accent);
+  font-size: 1.5rem;
+  /* flex-grow: 1; is no longer needed */
+}
+
+/* Back Button */
+.back-btn {
+  background: none;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 0.25rem 0.75rem;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), transform var(--transition);
+}
+
+.back-btn:hover {
+  background: var(--accent);
+  color: var(--bg);
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   MAIN CONTENT AREA
+   ========================================================= */
+
+.settings-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+  padding-top: 5rem; /* Increased padding-top since the header is no longer absolute */
+  text-align: center;
+}
+
+/* Theme Selector */
+.theme-select {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.theme-select select {
+  background: var(--bg);
+  color: var(--text);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition), background var(--transition);
+  width: 250px;
+  text-align: center;
+}
+
+.theme-select select:hover,
+.theme-select select:focus {
+  border-color: color-mix(in srgb, var(--accent) 80%, white 20%);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Action Buttons */
+.settings-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.settings-actions button {
+  background: transparent;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), transform var(--transition);
+}
+
+.settings-actions button:hover {
+  background: var(--accent);
+  color: var(--bg);
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   DELETE SAVE SECTION
+   ========================================================= */
+
+.delete-section {
+  margin-top: 3rem;
+}
+
+.delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--reddit-accent);
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: opacity var(--transition), transform var(--transition);
+}
+
+.delete-btn:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
+}
+
+/* Delete confirmation prompt */
+.delete-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  max-width: 300px;
+}
+
+.delete-confirm p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.delete-confirm input {
+  background: var(--bg);
+  color: var(--text);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.delete-confirm button {
+  background: transparent;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background var(--transition), color var(--transition);
+}
+
+.delete-confirm button:hover:enabled {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.delete-confirm button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
