@@ -1,11 +1,17 @@
 // src/client/components/StartScreen.tsx
 
 import type { Screen } from '../App';
-import useGameState from '../hooks/useGameState';
+import type useGameState from '../hooks/useGameState';
 import { calculateOfflineProgress } from '../../shared/helpers/calculations';
 
-export default function StartScreen({ goTo }: { goTo: (s: Screen) => void }) {
-  const { state } = useGameState();
+export default function StartScreen({
+  goTo,
+  gameState,
+}: {
+  goTo: (s: Screen) => void;
+  gameState: ReturnType<typeof useGameState>;
+}) {
+  const { state } = gameState;
 
   // Calculate offline gains
   const offlineKarma = calculateOfflineProgress(state);

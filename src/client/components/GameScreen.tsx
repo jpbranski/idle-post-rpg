@@ -1,8 +1,7 @@
 // src/client/components/GameScreen.tsx
 
 import { useState } from 'react';
-import type { Screen } from '../App';
-import useGameState from '../hooks/useGameState';
+import type { Screen, GameStateHook } from '../App';
 import {
   getClickValue,
   getPassivePerSecond,
@@ -13,11 +12,25 @@ import ShopModal from './ShopModal';
 import AchievementsModal from './AchievementsModal';
 import '../styles/GameScreen.css';
 
-export default function GameScreen({ goTo }: { goTo: (s: Screen) => void }) {
-  const { state, handleClick, buyUpgrade, buyPassive, buyInfinite } = useGameState();
+export default function GameScreen({
+  goTo,
+  gameState,
+}: {
+  goTo: (s: Screen) => void;
+  gameState: GameStateHook;
+}) {
+  const { state, handleClick, buyUpgrade, buyPassive, buyInfinite } = gameState;
   const [showUpgrades, setShowUpgrades] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+
+  const handleOpenAchievements = () => {
+    setShowAchievements(true);
+    // Mark achievements as viewed
+    if (!state.achievementsViewed) {
+      gameState.setState((s) => ({ ...s, achievementsViewed: true }));
+    }
+  };
 
   const clickValue = getClickValue(state);
   const passivePerSec = getPassivePerSecond(state);
@@ -93,7 +106,7 @@ export default function GameScreen({ goTo }: { goTo: (s: Screen) => void }) {
           <span>Shop</span>
           {state.awards > 0 && <span className="badge">{state.awards}</span>}
         </button>
-        <button className="action-btn" onClick={() => setShowAchievements(true)}>
+        <button className="action-btn" onClick={handleOpenAchievements}>
           <span className="icon">🏆</span>
           <span>Achievements</span>
           <span className="badge">{state.achievements.length}</span>
@@ -122,7 +135,7 @@ export default function GameScreen({ goTo }: { goTo: (s: Screen) => void }) {
         />
       )}
 
-      {showShop && <ShopModal state={state} onClose={() => setShowShop(false)} />}
+      {showShop && <ShopModal gameState={gameState} onClose={() => setShowShop(false)} />}
 
       {showAchievements && (
         <AchievementsModal state={state} onClose={() => setShowAchievements(false)} />

@@ -30,24 +30,30 @@ export default function useGameState() {
       const saved = localStorage.getItem(SAVE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        console.log('Loaded save from localStorage:', parsed);
         return { ...DEFAULT_STATE, ...parsed };
       }
     } catch (e) {
       console.error('Failed to load save:', e);
     }
+    console.log('Starting with default state');
     return DEFAULT_STATE;
   });
 
-  const saveTimeoutRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const eventTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const autoclickerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const eventTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tickIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoclickerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // === SAVE GAME ===
-  const saveGame = useCallback(() => {
+  const saveGame = useCallback(async () => {
     try {
       const toSave = { ...state, stats: { ...state.stats, lastSave: Date.now() } };
       localStorage.setItem(SAVE_KEY, JSON.stringify(toSave));
+
+      // Also save to Redis
+      const { saveGameState } = await import('../api-client');
+      await saveGameState(toSave);
     } catch (e) {
       console.error('Failed to save:', e);
     }
@@ -63,7 +69,9 @@ export default function useGameState() {
 
   // Save on unmount
   useEffect(() => {
-    return () => saveGame();
+    return () => {
+      saveGame().catch((err) => console.error('Save on unmount failed:', err));
+    };
   }, [saveGame]);
 
   // === OFFLINE PROGRESS ===
@@ -75,9 +83,9 @@ export default function useGameState() {
         karma: s.karma + offlineKarma,
         score: s.score + offlineKarma,
       }));
+      // TODO: Show notification with offline gains
     }
     setState((s) => ({ ...s, stats: { ...s.stats, lastOnline: Date.now() } }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update lastOnline on visibility change
@@ -236,7 +244,6 @@ export default function useGameState() {
 
   useEffect(() => {
     checkAchievements();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.stats, state.karma, state.score, state.upgrades, state.passives]);
 
   const unlockAchievement = useCallback((id: string) => {

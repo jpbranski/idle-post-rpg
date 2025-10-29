@@ -8,25 +8,26 @@ import Settings from './components/Settings';
 import useGameState from './hooks/useGameState';
 
 export type Screen = 'start' | 'game' | 'leaderboard' | 'settings';
+export type GameStateHook = ReturnType<typeof useGameState>;
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('start');
-  const { state } = useGameState();
+  const gameState = useGameState(); // Keep state at App level!
 
   // Apply theme to document
   useEffect(() => {
-    document.body.setAttribute('data-theme', state.settings.theme);
-  }, [state.settings.theme]);
+    document.body.setAttribute('data-theme', gameState.state.settings.theme);
+  }, [gameState.state.settings.theme]);
 
-  // Render current screen
+  // Render current screen (pass gameState as prop)
   switch (screen) {
     case 'game':
-      return <GameScreen goTo={setScreen} />;
+      return <GameScreen goTo={setScreen} gameState={gameState} />;
     case 'leaderboard':
-      return <Leaderboard goTo={setScreen} />;
+      return <Leaderboard goTo={setScreen} gameState={gameState} />;
     case 'settings':
-      return <Settings goTo={setScreen} />;
+      return <Settings goTo={setScreen} gameState={gameState} />;
     default:
-      return <StartScreen goTo={setScreen} />;
+      return <StartScreen goTo={setScreen} gameState={gameState} />;
   }
 }

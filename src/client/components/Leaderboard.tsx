@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Screen } from '../App';
-import useGameState from '../hooks/useGameState';
+import { getLeaderboard, getCurrentUserRank } from '../api-client';
 
 interface LeaderboardEntry {
   username: string;
@@ -11,41 +11,55 @@ interface LeaderboardEntry {
   isCurrentUser?: boolean;
 }
 
-export default function Leaderboard({ goTo }: { goTo: (s: Screen) => void }) {
-  const { state } = useGameState();
+import type { GameStateHook } from '../App';
+export default function Leaderboard({
+  goTo,
+  gameState,
+}: {
+  goTo: (s: Screen) => void;
+  gameState?: GameStateHook;
+}) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [currentUserRank, setCurrentUserRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Fetch from Devvit Redis
-    // For now, simulate leaderboard
-    const mockLeaderboard: LeaderboardEntry[] = Array.from({ length: 100 }, (_, i) => ({
-      username: `Player${i + 1}`,
-      score: Math.floor(Math.random() * 10000000),
-      rank: i + 1,
-    })).sort((a, b) => b.score - a.score);
+    const fetchLeaderboard = async () => {
+      try {
+        setLoading(true);
 
-    // Add current user if not anonymous
-    if (!state.settings.anonymous) {
-      const userEntry: LeaderboardEntry = {
-        username: 'You',
-        score: state.score,
-        rank: mockLeaderboard.filter((e) => e.score > state.score).length + 1,
-        isCurrentUser: true,
-      };
-      setCurrentUserRank(userEntry.rank);
-    }
+        // Fetch leaderboard from Redis
+        const data = await getLeaderboard(25);
+        setLeaderboard(data);
 
-    setLeaderboard(mockLeaderboard.slice(0, 25));
-    setLoading(false);
-  }, [state.score, state.settings.anonymous]);
+        // Fetch user rank if not anonymous
+        if (gameState && !gameState.state.settings.anonymous) {
+          const rank = await getCurrentUserRank();
+          setCurrentUserRank(rank);
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load leaderboard:', error);
+        setLoading(false);
+      }
+    };
+
+    void fetchLeaderboard();
+  }, [gameState]);
 
   if (loading) {
     return (
       <div className="screen leaderboard-screen">
-        <h2>Loading Leaderboard...</h2>
-        <button onClick={() => goTo('start')}>Back</button>
+        <div className="header">
+          <h2>🏆 Leaderboard</h2>
+          <button className="back-btn" onClick={() => goTo('game')}>
+            ← Back
+          </button>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+          <p>Loading leaderboard...</p>
+        </div>
       </div>
     );
   }
@@ -60,17 +74,17 @@ export default function Leaderboard({ goTo }: { goTo: (s: Screen) => void }) {
       </div>
 
       {/* Current User Rank */}
-      {!state.settings.anonymous && currentUserRank && (
+      {!gameState?.state.settings.anonymous && currentUserRank && (
         <div className="current-user-rank">
           <h3>Your Rank</h3>
           <div className="rank-display">
             <span className="rank-number">#{currentUserRank.toLocaleString()}</span>
-            <span className="rank-score">{state.score.toLocaleString()} score</span>
+            <span className="rank-score">{gameState?.state.score.toLocaleString()} score</span>
           </div>
         </div>
       )}
 
-      {state.settings.anonymous && (
+      {gameState?.state.settings.anonymous && (
         <div className="anonymous-notice">
           <p>🔒 You are anonymous. Disable in Settings to appear on the leaderboard.</p>
         </div>

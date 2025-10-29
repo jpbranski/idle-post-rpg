@@ -139,7 +139,10 @@ body {
 
 /* === CLICK AREA === */
 .click-area {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   margin: 2rem auto;
   max-width: 400px;
 }

@@ -1,10 +1,15 @@
 // src/client/components/Settings.tsx
 
-import type { Screen } from '../App';
-import useGameState from '../hooks/useGameState';
+import type { Screen, GameStateHook } from '../App';
 
-export default function Settings({ goTo }: { goTo: (s: Screen) => void }) {
-  const { state, changeTheme, toggleAnonymous, resetGame } = useGameState();
+export default function Settings({
+  goTo,
+  gameState,
+}: {
+  goTo: (s: Screen) => void;
+  gameState: GameStateHook;
+}) {
+  const { state, changeTheme, toggleAnonymous, resetGame } = gameState;
 
   const handleReset = () => {
     if (confirm('Are you sure you want to delete your save? This cannot be undone!')) {

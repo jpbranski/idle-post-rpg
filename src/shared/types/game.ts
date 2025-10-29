@@ -18,6 +18,8 @@ export interface GameState {
     comment: number;
     post: number;
     shitpost: number;
+    repost: number;
+    viralpost: number;
   };
 
   // Infinite multipliers
@@ -43,6 +45,8 @@ export interface GameState {
 
   // Achievements
   achievements: string[]; // achievement IDs
+  achievementsViewed: boolean;
+  lastViewedAchievementCount: number; // How many achievements were viewed last time
 
   // Stats
   stats: {
@@ -63,10 +67,10 @@ export interface GameState {
 export interface ActiveEffect {
   id: string;
   type: 'spam' | 'ban' | 'trending' | 'autoclicker';
-  target?: 'comment' | 'post' | 'shitpost'; // for spam
-  multiplier?: number; // for trending/ban
+  target?: 'comment' | 'post' | 'shitpost'; // Optional - only for spam
+  multiplier?: number; // Optional - for trending/ban
   endsAt: number; // timestamp
-  clicksPerSecond?: number; // for autoclicker
+  clicksPerSecond?: number; // Optional - for autoclicker
 }
 
 export interface Upgrade {
@@ -111,6 +115,8 @@ export const DEFAULT_STATE: GameState = {
     comment: 0,
     post: 0,
     shitpost: 0,
+    repost: 0,
+    viralpost: 0,
   },
   infinite: {
     popular: 0,
@@ -121,11 +127,12 @@ export const DEFAULT_STATE: GameState = {
     badges: [],
   },
   unlocks: {
-    themes: ['light'],
+    themes: ['light', 'dark'],
     autoclickers: [],
   },
   activeEffects: [],
   achievements: [],
+  achievementsViewed: false,
   stats: {
     totalClicks: 0,
     totalKarmaEarned: 0,

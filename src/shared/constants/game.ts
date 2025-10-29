@@ -1,5 +1,3 @@
-// src/shared/constants/game.ts
-
 import type { Upgrade, Achievement, ShopItem } from '../types/game';
 
 // === CLICK VALUES ===
@@ -7,9 +5,11 @@ export const REPLY_BASE = 1;
 export const REPLY_PER_LEVEL = 1; // each level adds +1 to click
 
 // === PASSIVE VALUES (per second) ===
-export const COMMENT_BASE = 1;
-export const POST_BASE = 5;
-export const SHITPOST_BASE = 15;
+export const COMMENT_BASE = 3;
+export const POST_BASE = 15;
+export const SHITPOST_BASE = 75;
+export const REPOST_BASE = 300;
+export const VIRAL_POST_BASE = 1500;
 
 // === UPGRADE DEFINITIONS ===
 export const UPGRADES: Upgrade[] = [
@@ -49,7 +49,7 @@ export const PASSIVE_UPGRADES: Upgrade[] = [
     description: 'Passive karma generation',
     baseCost: 50,
     costMultiplier: 1.15,
-    effect: '+1 karma/sec per level',
+    effect: '+3 karma/sec per level',
   },
   {
     key: 'post',
@@ -57,15 +57,31 @@ export const PASSIVE_UPGRADES: Upgrade[] = [
     description: 'Better passive karma generation',
     baseCost: 500,
     costMultiplier: 1.15,
-    effect: '+5 karma/sec per level',
+    effect: '+15 karma/sec per level',
   },
   {
     key: 'shitpost',
     label: 'Shitposts',
-    description: 'Best passive karma generation',
+    description: 'Great passive karma generation',
     baseCost: 5000,
     costMultiplier: 1.15,
-    effect: '+15 karma/sec per level',
+    effect: '+75 karma/sec per level',
+  },
+  {
+    key: 'repost',
+    label: 'Reposts',
+    description: 'Excellent passive karma generation',
+    baseCost: 50000,
+    costMultiplier: 1.15,
+    effect: '+300 karma/sec per level',
+  },
+  {
+    key: 'viralpost',
+    label: 'Viral Posts',
+    description: 'Maximum passive karma generation',
+    baseCost: 500000,
+    costMultiplier: 1.15,
+    effect: '+1500 karma/sec per level',
   },
 ];
 
@@ -99,18 +115,18 @@ export const SHOP_ITEMS: ShopItem[] = [
     id: 'dark',
     name: 'Dark Mode',
     description: 'Modern dark Reddit theme',
-    cost: 1,
+    cost: 0,
     type: 'theme',
     value: 'dark',
-  },
+  }, // FREE
   {
     id: 'oldschool',
     name: 'Old School',
     description: 'Classic Reddit look',
-    cost: 5,
+    cost: 1,
     type: 'theme',
     value: 'oldschool',
-  },
+  }, // MOVED TO 1
   {
     id: 'terminal',
     name: 'Terminal',
@@ -291,6 +307,18 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Buy 10 Shitpost upgrades',
     condition: (s) => s.passives.shitpost >= 10,
   },
+  {
+    id: 'repost_10',
+    name: 'Reposter',
+    description: 'Buy 10 Repost upgrades',
+    condition: (s) => s.passives.repost >= 10,
+  },
+  {
+    id: 'viral_10',
+    name: 'Viral Creator',
+    description: 'Buy 10 Viral Post upgrades',
+    condition: (s) => s.passives.viralpost >= 10,
+  },
 
   // Award milestones
   {
@@ -381,7 +409,7 @@ export const RANDOM_EVENTS: RandomEvent[] = [
     weight: 1,
     duration: 30,
     effect: 'ban',
-    multiplier: 0.5, // 50% penalty
+    multiplier: 0.5,
   },
   {
     id: 'trending',
@@ -391,6 +419,24 @@ export const RANDOM_EVENTS: RandomEvent[] = [
     duration: 20,
     effect: 'trending',
     multiplier: 2,
+  },
+  {
+    id: 'pandas_bad',
+    name: '🐼 Keyboard Pandas!',
+    description: 'Pandas are messing with your keyboard!',
+    weight: 1,
+    duration: 30,
+    effect: 'trending',
+    multiplier: 0.9,
+  },
+  {
+    id: 'pandas_good',
+    name: '🐼 Helper Pandas!',
+    description: 'Pandas are boosting your karma!',
+    weight: 1,
+    duration: 25,
+    effect: 'trending',
+    multiplier: 1.5,
   },
 ];
 

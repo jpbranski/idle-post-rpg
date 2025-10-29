@@ -1,17 +1,16 @@
 // src/client/components/ShopModal.tsx
 
-import type { GameState } from '../../shared/types/game';
 import { SHOP_ITEMS } from '../../shared/constants/game';
-import useGameState from '../hooks/useGameState';
 import { canPrestige, getPrestigeReward } from '../../shared/helpers/calculations';
+import type { GameStateHook } from '../App';
 
 interface Props {
-  state: GameState;
+  gameState: GameStateHook;
   onClose: () => void;
 }
 
-export default function ShopModal({ state, onClose }: Props) {
-  const { buyShopItem } = useGameState();
+export default function ShopModal({ gameState, onClose }: Props) {
+  const { state, buyShopItem } = gameState;
 
   const themes = SHOP_ITEMS.filter((item) => item.type === 'theme');
   const autoclickers = SHOP_ITEMS.filter((item) => item.type === 'autoclicker');
