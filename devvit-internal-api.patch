@@ -1,0 +1,171 @@
+diff --git a/devvit.json b/devvit.json
+index 1111111..2222222 100644
+--- a/devvit.json
++++ b/devvit.json
+@@ -1,5 +1,11 @@
+ {
+-  "name": "idle-post-rpg"
++  "name": "idle-post-rpg",
++  "storage": "kv",
++  "permissions": ["identity"],
++  "webview": {
++    "entrypoint": "./dist"
++  }
+ }
+diff --git a/src/client/devvit-bridge.ts b/src/client/devvit-bridge.ts
+index 1111111..2222222 100644
+--- a/src/client/devvit-bridge.ts
++++ b/src/client/devvit-bridge.ts
+@@ -1,10 +1,40 @@
+ // Bridge between React client and Devvit backend using HTTP endpoints
+
+-import type { GameState } from '../shared/types/game';
+-
+-const API_BASE = '/api';
+-
+-async function callServerAPI<T>(endpoint: string, payload?: any): Promise<T> {
+-  try {
+-    const response = await fetch(`${API_BASE}${endpoint}`, {
+-      method: 'POST',
+-      headers: {
+-        'Content-Type': 'application/json',
+-      },
+-      body: JSON.stringify(payload || {}),
+-    });
+-
+-    if (!response.ok) {
+-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+-    }
+-
+-    const data = await response.json();
+-    if (data.error) {
+-      throw new Error(data.error);
+-    }
+-    return data;
+-  } catch (error) {
+-    console.error(`API call to ${endpoint} failed:`, error);
+-    throw error;
+-  }
+-}
+-
+-// === API Functions ===
+-
+-export async function saveGameToRedis(gameState: GameState): Promise<void> {
+-  try {
+-    await callServerAPI('/save-game', { gameState });
+-  } catch (error) {
+-    console.error('Failed to save to server:', error);
+-    localStorage.setItem('idle-post-rpg-save', JSON.stringify(gameState));
+-  }
+-}
+-
+-export async function loadGameFromRedis(): Promise<GameState | null> {
+-  try {
+-    const data = await callServerAPI<GameState | null>('/load-game');
+-    return data || null;
+-  } catch (error) {
+-    console.error('Failed to load from server:', error);
+-    const saved = localStorage.getItem('idle-post-rpg-save');
+-    return saved ? JSON.parse(saved) : null;
+-  }
+-}
+-
+-export async function getLeaderboardFromRedis(limit: number = 25): Promise<any[]> {
+-  try {
+-    const data = await callServerAPI<any[]>('/get-leaderboard', { limit });
+-    return data || [];
+-  } catch (error) {
+-    console.error('Failed to get leaderboard:', error);
+-    return [];
+-  }
+-}
+-
+-export async function getUserRankFromRedis(): Promise<number | null> {
+-  try {
+-    const data = await callServerAPI<{ rank: number | null }>('/get-rank');
+-    return data?.rank || null;
+-  } catch (error) {
+-    console.error('Failed to get rank:', error);
+-    return null;
+-  }
+-}
++import { Devvit } from '@devvit/public-api';
++import type { GameState } from '../shared/types/game';
++
++export async function saveGameToRedis(gameState: GameState): Promise<void> {
++  try {
++    await Devvit.callAction('saveGame', { gameState });
++  } catch (error) {
++    console.error('Failed to save to server:', error);
++    localStorage.setItem('idle-post-rpg-save', JSON.stringify(gameState));
++  }
++}
++
++export async function loadGameFromRedis(): Promise<GameState | null> {
++  try {
++    const data = await Devvit.callAction('loadGame', { user: 'me' });
++    return data || null;
++  } catch (error) {
++    console.error('Failed to load from server:', error);
++    const saved = localStorage.getItem('idle-post-rpg-save');
++    return saved ? JSON.parse(saved) : null;
++  }
++}
++
++export async function getLeaderboardFromRedis(): Promise<any[]> {
++  try {
++    const data = await Devvit.callAction('getLeaderboard', {});
++    return data || [];
++  } catch (error) {
++    console.error('Failed to get leaderboard:', error);
++    return [];
++  }
++}
+diff --git a/src/devvit/main.ts b/src/devvit/main.ts
+new file mode 100644
+--- /dev/null
++++ b/src/devvit/main.ts
+@@ -0,0 +1,63 @@
++import { Devvit } from '@devvit/public-api';
++
++Devvit.addAction({
++  name: 'saveGame',
++  description: 'Save user game state and update leaderboard',
++  async handler({ gameState }, context) {
++    const user = await context.user.getCurrentUser();
++    if (!user) return;
++    const key = `game:${user.id}`;
++    await context.kv.set(key, JSON.stringify(gameState));
++
++    // Update cached leaderboard
++    const lbKey = 'leaderboard:top25';
++    const cached = await context.kv.get(lbKey);
++    const leaderboard = cached ? JSON.parse(cached) : [];
++
++    const existing = leaderboard.find((e: any) => e.user === user.id);
++    if (existing) existing.score = gameState.score;
++    else leaderboard.push({ user: user.id, name: user.name, score: gameState.score });
++
++    leaderboard.sort((a, b) => b.score - a.score);
++    const trimmed = leaderboard.slice(0, 25);
++    await context.kv.set(lbKey, JSON.stringify(trimmed));
++  },
++});
++
++Devvit.addAction({
++  name: 'loadGame',
++  async handler(_, context) {
++    const user = await context.user.getCurrentUser();
++    if (!user) return null;
++    const data = await context.kv.get(`game:${user.id}`);
++    return data ? JSON.parse(data) : null;
++  },
++});
++
++Devvit.addAction({
++  name: 'getLeaderboard',
++  async handler(_, context) {
++    const lb = await context.kv.get('leaderboard:top25');
++    return lb ? JSON.parse(lb) : [];
++  },
++});
